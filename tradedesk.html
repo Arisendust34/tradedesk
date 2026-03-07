@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#080c18">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TradeDesk">
+<title>TradeDesk Pro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#080c18;--surface:#0f1425;--card:#141929;--card2:#1a2035;
+  --border:#1e2840;--border2:#263050;--accent:#4f8ef7;--accent2:#2563eb;
+  --green:#22d3a0;--green-dim:#1a9b77;--red:#f05a5a;--red-dim:#a83a3a;
+  --gold:#f7b940;--text:#e8edf8;--muted:#6b7a99;--muted2:#9ba5bf;
+  --font-head:'Syne',sans-serif;--font-mono:'DM Mono',monospace;
+  --nav-h:68px;--safe-bot:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font-head)}
+body{display:flex;flex-direction:column;position:fixed;width:100%;top:0;left:0}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
+
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 10px;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0;padding-top:calc(14px + env(safe-area-inset-top,0px))}
+.logo{display:flex;align-items:center;gap:8px}
+.logo-mark{width:30px;height:30px;background:var(--accent2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff}
+.logo-text{font-size:17px;font-weight:700;letter-spacing:-.3px}
+.logo-text span{color:var(--accent)}
+.header-right{display:flex;align-items:center;gap:8px}
+.market-badge{font-family:var(--font-mono);font-size:10px;font-weight:500;padding:4px 8px;border-radius:6px;border:1px solid var(--border2);color:var(--muted2);letter-spacing:.5px}
+.market-badge.open{color:var(--green);border-color:var(--green-dim)}
+.market-badge.pre{color:var(--gold);border-color:rgba(247,185,64,.4)}
+.time-display{font-family:var(--font-mono);font-size:11px;color:var(--muted);letter-spacing:.5px}
+.api-badge{font-family:var(--font-mono);font-size:9px;padding:3px 7px;border-radius:5px;border:1px solid var(--border2);color:var(--muted);cursor:pointer;white-space:nowrap}
+.api-badge.warn{color:var(--gold);border-color:rgba(247,185,64,.4)}
+.api-badge.danger{color:var(--red);border-color:rgba(240,90,90,.4)}
+
+.content-wrap{flex:1;overflow:hidden;position:relative}
+.page{position:absolute;inset:0;overflow-y:auto;padding:16px 16px calc(var(--nav-h) + var(--safe-bot) + 16px);display:none;animation:fadeIn .2s ease}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+.bottom-nav{display:flex;align-items:stretch;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;padding-bottom:var(--safe-bot);height:calc(var(--nav-h) + var(--safe-bot))}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:8px 4px;cursor:pointer;position:relative}
+.nav-item svg{width:22px;height:22px;stroke:var(--muted);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:.2s}
+.nav-item span{font-size:10px;color:var(--muted);font-weight:600;letter-spacing:.3px;transition:.2s}
+.nav-item.active svg{stroke:var(--accent)}
+.nav-item.active span{color:var(--accent)}
+.nav-item.active::before{content:'';position:absolute;top:0;left:20%;right:20%;height:2px;background:var(--accent);border-radius:0 0 4px 4px}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:12px}
+.card-header{padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.card-title{font-size:12px;font-weight:700;letter-spacing:.3px;color:var(--muted2);text-transform:uppercase}
+.card-body{padding:14px 16px}
+
+.data-banner{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:11px}
+.data-banner.live{border-color:rgba(34,211,160,.3)}
+.data-banner.loading{border-color:rgba(79,142,247,.3)}
+.data-banner.error{border-color:rgba(240,90,90,.3)}
+.data-banner.cached{border-color:rgba(247,185,64,.2)}
+.db-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.db-dot.g{background:var(--green);box-shadow:0 0 6px var(--green)}
+.db-dot.b{background:var(--accent);animation:pulse 1.5s infinite}
+.db-dot.r{background:var(--red)}
+.db-dot.y{background:var(--gold)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.db-text{flex:1;color:var(--muted2)}
+.db-time{font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-left:4px}
+.refresh-btn{background:none;border:1px solid var(--border2);border-radius:6px;padding:3px 8px;color:var(--muted2);font-size:10px;font-family:var(--font-head);font-weight:600;cursor:pointer;flex-shrink:0}
+
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.3px;padding:3px 9px;border-radius:99px}
+.pill-green{background:rgba(34,211,160,.12);color:var(--green)}
+.pill-red{background:rgba(240,90,90,.12);color:var(--red)}
+.pill-gold{background:rgba(247,185,64,.12);color:var(--gold)}
+.pill-blue{background:rgba(79,142,247,.12);color:var(--accent)}
+.tag{font-family:var(--font-mono);font-size:10px;font-weight:500;padding:2px 7px;border-radius:5px;background:var(--card2);border:1px solid var(--border2);color:var(--muted2)}
+
+.section-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.sk{background:linear-gradient(90deg,var(--card) 25%,var(--card2) 50%,var(--card) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:6px;display:inline-block}
+
+/* ALERTS */
+.alert-hero{background:linear-gradient(135deg,#0f1e40,#0a1428 60%,#080c18);border:1px solid var(--border2);border-radius:16px;padding:20px;margin-bottom:16px;position:relative;overflow:hidden}
+.alert-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 80% 20%,rgba(79,142,247,.15),transparent 70%)}
+.alert-date{font-family:var(--font-mono);font-size:11px;color:var(--muted);letter-spacing:.5px;margin-bottom:6px}
+.alert-headline{font-size:22px;font-weight:800;line-height:1.2;margin-bottom:4px;position:relative}
+.alert-headline span{color:var(--accent)}
+.alert-sub{font-size:12px;color:var(--muted2);position:relative}
+.methodology-row{display:flex;gap:6px;margin-top:12px;position:relative;flex-wrap:wrap}
+.alert-card{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden;cursor:pointer;transition:border-color .2s,transform .15s}
+.alert-card:active{transform:scale(.99)}
+.ac-top{padding:14px 16px;display:flex;align-items:flex-start;gap:12px}
+.ac-logo{width:42px;height:42px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff}
+.ac-body{flex:1;min-width:0}
+.ac-ticker{font-size:16px;font-weight:800;letter-spacing:-.3px}
+.ac-name{font-size:11px;color:var(--muted2);margin-top:1px}
+.ac-right{text-align:right;flex-shrink:0}
+.ac-price{font-family:var(--font-mono);font-size:16px;font-weight:500}
+.ac-chg{font-family:var(--font-mono);font-size:11px}
+.ac-chg.pos{color:var(--green)}.ac-chg.neg{color:var(--red)}
+.ac-details{padding:0 16px 14px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.di label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px}
+.di span{font-family:var(--font-mono);font-size:12px;font-weight:500}
+.ac-footer{padding:10px 16px;background:var(--card2);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.sig-meter{display:flex;gap:3px;align-items:center}
+.sig-bar{width:5px;border-radius:2px;background:var(--border2)}
+.sig-bar.lit{background:var(--green)}
+
+/* DIP */
+.dip-controls{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:14px}
+.sma-tabs{display:flex;gap:6px;margin-bottom:14px}
+.sma-tab{flex:1;padding:8px 4px;text-align:center;font-size:12px;font-weight:700;border-radius:10px;cursor:pointer;background:var(--card2);color:var(--muted);border:1px solid var(--border);transition:.2s}
+.sma-tab.active{background:var(--accent2);color:#fff;border-color:var(--accent2)}
+.ticker-input-row{display:flex;gap:8px}
+.ticker-input{flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px 14px;color:var(--text);font-family:var(--font-mono);font-size:13px;font-weight:500;letter-spacing:1px;text-transform:uppercase;outline:none;transition:border-color .2s}
+.ticker-input:focus{border-color:var(--accent)}
+.ticker-input::placeholder{color:var(--muted);font-size:12px}
+.add-btn{padding:10px 16px;background:var(--accent2);border:none;border-radius:10px;color:#fff;font-family:var(--font-head);font-size:13px;font-weight:700;cursor:pointer}
+.ticker-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.ticker-chip{display:flex;align-items:center;gap:5px;background:var(--card2);border:1px solid var(--border2);border-radius:8px;padding:4px 10px;font-family:var(--font-mono);font-size:12px;font-weight:500;transition:.2s}
+.ticker-chip.loading{opacity:.5}
+.ticker-chip button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;line-height:1;padding:0;margin-left:2px}
+.dip-chart-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px}
+.chart-container{position:relative;height:220px;width:100%}
+.dip-table{width:100%;border-collapse:collapse}
+.dip-table th{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:8px 0;text-align:left;border-bottom:1px solid var(--border)}
+.dip-table td{padding:11px 0;border-bottom:1px solid var(--border);vertical-align:middle}
+.dip-table tr:last-child td{border-bottom:none}
+.dip-t{font-size:14px;font-weight:700}
+.dip-p{font-family:var(--font-mono);font-size:10px;color:var(--muted2);margin-top:1px}
+.dip-pct{font-family:var(--font-mono);font-size:13px;font-weight:500;text-align:right}
+.dip-pct.d{color:var(--red)}.dip-pct.r{color:var(--green)}
+.bar-cell{padding:11px 10px 11px 0}
+.bar-track{height:6px;background:var(--border);border-radius:3px;width:55px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;transition:width .5s ease}
+.bn{background:linear-gradient(90deg,var(--red-dim),var(--red))}
+.bp{background:linear-gradient(90deg,var(--green-dim),var(--green))}
+
+/* EARNINGS */
+.earnings-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.week-label{font-size:15px;font-weight:700}
+.week-arr{width:34px;height:34px;border-radius:10px;border:1px solid var(--border2);background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.week-arr svg{width:16px;height:16px;stroke:var(--muted2);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.week-arrows{display:flex;gap:8px}
+.day-column{margin-bottom:12px}
+.day-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.day-name{font-size:12px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px}
+.day-date{width:26px;height:26px;border-radius:8px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;font-family:var(--font-mono)}
+.day-date.today{background:var(--accent2);color:#fff}
+.earning-row{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:11px 14px;margin-bottom:6px}
+.er-icon{width:36px;height:36px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff}
+.er-body{flex:1;min-width:0}
+.er-ticker{font-size:13px;font-weight:800;display:flex;align-items:center;gap:6px}
+.er-name{font-size:10px;color:var(--muted2);margin-top:1px}
+.er-right{text-align:right;flex-shrink:0}
+.er-chg{font-family:var(--font-mono);font-size:11px}
+.er-chg.pos{color:var(--green)}.er-chg.neg{color:var(--red)}
+.er-time{font-size:10px;color:var(--muted);margin-top:2px}
+.timing-group{margin-bottom:10px}
+.timing-label{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px}
+.earn-ftab{flex:1;padding:8px 4px;text-align:center;font-size:11px;font-weight:700;border-radius:10px;cursor:pointer;background:var(--card2);color:var(--muted);border:1px solid var(--border);transition:.2s}
+.earn-ftab.active{background:var(--accent2);color:#fff;border-color:var(--accent2)}
+.earn-est{font-family:var(--font-mono);font-size:10px;color:var(--muted2)}
+.earn-surprise{font-family:var(--font-mono);font-size:9px;padding:1px 5px;border-radius:4px;margin-top:2px;display:inline-block}
+.earn-surprise.beat{background:rgba(34,211,160,.15);color:var(--green)}
+.earn-surprise.miss{background:rgba(240,90,90,.15);color:var(--red)}
+.no-earnings-week{text-align:center;padding:32px 20px;color:var(--muted);font-size:13px}
+.earn-spinner{width:18px;height:18px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* PORTFOLIO */
+.port-hero{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.port-stat{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px}
+.port-stat.wide{grid-column:1/-1}
+.ps-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.ps-value{font-family:var(--font-mono);font-size:20px;font-weight:500}
+.ps-sub{font-size:11px;margin-top:3px;font-family:var(--font-mono)}
+.alloc-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px}
+.donut-legend{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:14px}
+.dl-item{display:flex;align-items:center;gap:6px;font-size:11px}
+.dl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dl-name{color:var(--muted2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dl-pct{font-family:var(--font-mono);font-size:10px;color:var(--text);font-weight:500}
+.holding-row{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:13px 15px;margin-bottom:8px;cursor:pointer;transition:border-color .2s,transform .15s}
+.holding-row:active{transform:scale(.99)}
+.hr-logo{width:40px;height:40px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff}
+.hr-body{flex:1;min-width:0}
+.hr-t{font-size:14px;font-weight:800}
+.hr-n{font-size:10px;color:var(--muted2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.hr-s{font-size:10px;color:var(--muted);margin-top:2px;font-family:var(--font-mono)}
+.hr-right{text-align:right;flex-shrink:0}
+.hr-val{font-family:var(--font-mono);font-size:14px;font-weight:500}
+.hr-gain{font-family:var(--font-mono);font-size:11px;margin-top:2px}
+.hr-gain.pos{color:var(--green)}.hr-gain.neg{color:var(--red)}
+.insight-card{background:linear-gradient(135deg,#0d1b38,#0a1228);border:1px solid #1e3060;border-radius:14px;padding:16px;margin-bottom:14px}
+.insight-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.insight-icon{width:28px;height:28px;border-radius:8px;background:var(--accent2);display:flex;align-items:center;justify-content:center;font-size:13px}
+.insight-title{font-size:13px;font-weight:700}
+.insight-item{display:flex;gap:8px;margin-bottom:8px;font-size:12px;color:var(--muted2);line-height:1.5}
+.insight-item::before{content:'→';color:var(--accent);font-weight:700;flex-shrink:0}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
+.toggle-row:last-child{border-bottom:none}
+.tgl-label{font-size:13px;font-weight:600}
+.tgl-sub{font-size:11px;color:var(--muted2);margin-top:2px}
+.toggle{width:42px;height:24px;border-radius:12px;background:var(--border2);position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.toggle.on{background:var(--accent2)}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s}
+.toggle.on::after{transform:translateX(18px)}
+
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex;animation:fadeIn .2s}
+.modal-sheet{background:var(--surface);border-top:1px solid var(--border);border-radius:20px 20px 0 0;padding:20px 20px 40px;width:100%;max-height:85vh;overflow-y:auto;animation:slideUp .25s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:none}}
+.modal-handle{width:40px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 16px}
+
+#toast{position:fixed;bottom:calc(var(--nav-h) + var(--safe-bot) + 12px);left:50%;transform:translateX(-50%) translateY(20px);opacity:0;background:#1a2a50;border:1px solid var(--accent2);color:var(--text);font-size:12px;font-weight:600;padding:10px 18px;border-radius:20px;transition:.3s;pointer-events:none;white-space:nowrap;z-index:999}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.warn{background:#2a1a10;border-color:rgba(247,185,64,.5);color:var(--gold)}
+#toast.err{background:#2a1010;border-color:rgba(240,90,90,.5);color:var(--red)}
+
+.limit-bar-track{height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin:8px 0 4px}
+.limit-bar-fill{height:100%;border-radius:4px;transition:width .4s ease}
+.flex-b{display:flex;align-items:center;justify-content:space-between}
+.mono{font-family:var(--font-mono)}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="logo">
+    <div class="logo-mark">TD</div>
+    <div class="logo-text">Trade<span>Desk</span></div>
+  </div>
+  <div class="header-right">
+    <div class="api-badge" id="fhKeyCount" onclick="openApiModal()" style="color:var(--green);border-color:rgba(34,211,160,.3)">FH ×1</div>
+    <div class="api-badge" id="apiBadge" onclick="openApiModal()">SMA 0/25</div>
+    <div class="market-badge" id="mktBadge">CLOSED</div>
+    <div class="time-display" id="clk">--:--</div>
+  </div>
+</header>
+
+<div class="content-wrap">
+
+  <!-- ALERTS -->
+  <div class="page active" id="page-alerts">
+    <div class="alert-hero">
+      <div class="alert-date" id="alertDate">--</div>
+      <div class="alert-headline">Morning <span>Watchlist</span></div>
+      <div class="alert-sub">Swing trades &amp; options picks — EST pre-market</div>
+      <div class="methodology-row">
+        <span class="pill pill-blue">🏛 Nancy P</span>
+        <span class="pill pill-green">📈 Carlson</span>
+        <span class="pill pill-gold">⚡ Keenan</span>
+      </div>
+    </div>
+    <div id="alertBanner"></div>
+    <div class="section-label">Top Picks Today</div>
+    <div id="alertCards"></div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">Notification Settings</span></div>
+      <div class="card-body">
+        <div class="toggle-row"><div><div class="tgl-label">Morning Alerts</div><div class="tgl-sub">Daily 8:30 AM EST pre-market push</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+        <div class="toggle-row"><div><div class="tgl-label">Options Flow Alerts</div><div class="tgl-sub">Unusual options activity on watchlist</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+        <div class="toggle-row"><div><div class="tgl-label">Earnings Day Reminder</div><div class="tgl-sub">Alert when holdings report earnings</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+        <div class="toggle-row"><div><div class="tgl-label">Nancy Pelosi Trades</div><div class="tgl-sub">Alert on Congressional disclosures</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DIP FINDER -->
+  <div class="page" id="page-dip">
+    <div class="dip-controls">
+      <div class="sma-tabs" id="smaTabs">
+        <div class="sma-tab active" data-sma="10">10D</div>
+        <div class="sma-tab" data-sma="50">50D</div>
+        <div class="sma-tab" data-sma="100">100D</div>
+        <div class="sma-tab" data-sma="200">200D</div>
+      </div>
+      <div class="ticker-input-row">
+        <input class="ticker-input" id="tickerInput" placeholder="Add ticker… e.g. TSLA" maxlength="6">
+        <button class="add-btn" onclick="addTicker()">+ Add</button>
+      </div>
+      <div class="ticker-chips" id="tickerChips"></div>
+    </div>
+    <div id="dipBanner"></div>
+    <div class="dip-chart-wrap">
+      <div class="flex-b" style="margin-bottom:10px">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.3px" id="dipChartTitle">Price vs 200-Day SMA</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">% deviation · green = above SMA · red = below</div>
+        </div>
+        <span class="pill pill-blue" id="smaLabel">SMA 200</span>
+      </div>
+      <div class="chart-container"><canvas id="dipChart"></canvas></div>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <div class="card-header"><span class="card-title">Dip Table</span><span class="tag" id="dipTs">--</span></div>
+      <div class="card-body" style="padding:0 16px">
+        <table class="dip-table">
+          <thead><tr><th>Ticker</th><th>Bar</th><th>SMA</th><th style="text-align:right">Dev %</th></tr></thead>
+          <tbody id="dipBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- EARNINGS -->
+  <div class="page" id="page-earnings">
+    <div class="earnings-nav">
+      <div class="week-label" id="weekLabel">--</div>
+      <div class="week-arrows">
+        <div class="week-arr" onclick="changeWeek(-1)"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div>
+        <div class="week-arr" onclick="changeWeek(1)"><svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></div>
+      </div>
+    </div>
+    <!-- Filter tabs + search -->
+    <div style="margin-bottom:12px">
+      <div style="display:flex;gap:6px;margin-bottom:10px" id="earnFilterTabs">
+        <div class="earn-ftab active" data-f="all" onclick="setEarnFilter('all',this)">All</div>
+        <div class="earn-ftab" data-f="held" onclick="setEarnFilter('held',this)">My Holdings</div>
+        <div class="earn-ftab" data-f="watch" onclick="setEarnFilter('watch',this)">Watchlist</div>
+      </div>
+      <div style="position:relative">
+        <input id="earnSearch" class="ticker-input" placeholder="Search ticker or company…" style="width:100%;text-transform:none;letter-spacing:0;font-size:12px" oninput="renderEarnings()">
+        <div style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none">🔍</div>
+      </div>
+    </div>
+    <div id="earnBanner"></div>
+    <div id="earningsCal"></div>
+  </div>
+
+  <!-- PORTFOLIO -->
+  <div class="page" id="page-portfolio">
+    <div id="portBanner"></div>
+    <div class="port-hero">
+      <div class="port-stat wide">
+        <div class="ps-label">Total Portfolio Value</div>
+        <div class="ps-value" id="portVal"><span class="sk" style="width:140px;height:24px">&nbsp;</span></div>
+        <div class="ps-sub" id="portGain" style="color:var(--muted2)">Loading live prices…</div>
+      </div>
+      <div class="port-stat"><div class="ps-label">Annual Income</div><div class="ps-value" style="font-size:16px">$254.70</div><div class="ps-sub" style="color:var(--muted2)">0.46% yield</div></div>
+      <div class="port-stat"><div class="ps-label">Holdings</div><div class="ps-value" style="font-size:16px">10</div><div class="ps-sub" style="color:var(--muted2)">Stocks + ETFs</div></div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-head"><div class="insight-icon">🧠</div><div class="insight-title">Portfolio Insight — Age 25, High Growth</div></div>
+      <div class="insight-item">VTI is your largest holding — great broad-market foundation. At 25, consider increasing VUG weighting for a pure growth tilt.</div>
+      <div class="insight-item">GOOGL is heavily concentrated (&gt;26%). Strong compounder, but monitor if it exceeds 25% — consider trimming into strength.</div>
+      <div class="insight-item">EFX is the only holding in the red. Review thesis or harvest the loss for tax offset before year end.</div>
+      <div class="insight-item">NVDA + ASML = strong semiconductor exposure. Avoid adding more chip names to keep sector balance healthy.</div>
+    </div>
+    <div class="alloc-wrap">
+      <div style="font-size:12px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px">Allocation</div>
+      <div style="position:relative;height:200px;width:100%;max-width:200px;margin:0 auto"><canvas id="donutChart"></canvas></div>
+      <div class="donut-legend" id="donutLegend"></div>
+    </div>
+    <div class="section-label">Holdings</div>
+    <div id="holdingsList"></div>
+  </div>
+
+</div>
+
+<nav class="bottom-nav">
+  <div class="nav-item active" onclick="switchPage('alerts',this)">
+    <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    <span>Alerts</span>
+  </div>
+  <div class="nav-item" onclick="switchPage('dip',this)">
+    <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+    <span>Dip Finder</span>
+  </div>
+  <div class="nav-item" onclick="switchPage('earnings',this)">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    <span>Earnings</span>
+  </div>
+  <div class="nav-item" onclick="switchPage('portfolio',this)">
+    <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    <span>Portfolio</span>
+  </div>
+</nav>
+
+<div id="toast"></div>
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal-sheet"><div class="modal-handle"></div><div id="modalContent"></div></div>
+</div>
+
+<script>
+/* ─── CONFIG ─────────────────────────────────── */
+const AV_KEY  = 'TWCI2XK4ZEZ6J18F';
+const AV_BASE = 'https://www.alphavantage.co/query';
+const AV_LIMIT  = 25;
+const AV_RATE   = 13500; // ms between AV SMA calls
+const TTL_MS    = 30*60*1000; // 30-min cache
+
+// Finnhub — free, CORS-enabled, 60 req/min per key
+// Two keys = 120 req/min via round-robin
+const FH_BASE = 'https://finnhub.io/api/v1';
+let _fhIdx = 0;
+function getFHKeys(){
+  const k1 = 'd6m30ghr01ql7984n670d6m30ghr01ql7984n67g';
+  const k2 = localStorage.getItem('td_fh_key2') || 'd6m3cehr01ql7984nd1gd6m3cehr01ql7984nd20';
+  return [k1, k2].filter(Boolean);
+}
+function getFHKey(){
+  const keys = getFHKeys();
+  if(!keys.length) return '';
+  return keys[(_fhIdx++) % keys.length];
+}
+
+/* ─── DAILY AV CALL COUNTER ──────────────────── */
+const Ctr = {
+  get() {
+    const today = new Date().toDateString();
+    if(localStorage.getItem('td_date') !== today){
+      localStorage.setItem('td_date', today);
+      localStorage.setItem('td_calls','0');
+    }
+    return parseInt(localStorage.getItem('td_calls')||'0');
+  },
+  inc() { const n=this.get()+1; localStorage.setItem('td_calls',String(n)); refreshBadge(); return n; },
+  rem() { return Math.max(0, AV_LIMIT - this.get()); }
+};
+
+function refreshBadge() {
+  const keys=getFHKeys(), u=Ctr.get(), el=document.getElementById('apiBadge');
+  el.textContent=`SMA ${u}/${AV_LIMIT}`;
+  el.className='api-badge'+(u>=20?' danger':u>=15?' warn':'');
+  // Show key count indicator
+  const kc=document.getElementById('fhKeyCount');
+  if(kc) kc.textContent=`FH ×${keys.length}`;
+}
+
+/* ─── SESSION CACHE ──────────────────────────── */
+const SC = {
+  get(k) {
+    try {
+      const r=sessionStorage.getItem('td_'+k);
+      if(!r) return null;
+      const {d,t}=JSON.parse(r);
+      if(Date.now()-t>TTL_MS){ sessionStorage.removeItem('td_'+k); return null; }
+      return d;
+    } catch{ return null; }
+  },
+  set(k,d){ try{ sessionStorage.setItem('td_'+k,JSON.stringify({d,t:Date.now()})); }catch{} },
+  ts(k){ try{ const r=sessionStorage.getItem('td_'+k); return r?JSON.parse(r).t:null; }catch{ return null; } },
+  clear(prefix){ Object.keys(sessionStorage).filter(k=>k.startsWith('td_'+prefix)).forEach(k=>sessionStorage.removeItem(k)); }
+};
+
+/* ─── AV RATE-LIMITED QUEUE (SMA only) ───────── */
+const AVQ = {
+  q:[], run:false,
+  add(fn){ return new Promise((res,rej)=>{ this.q.push({fn,res,rej}); if(!this.run) this.go(); }); },
+  async go(){
+    this.run=true;
+    while(this.q.length){
+      const {fn,res,rej}=this.q.shift();
+      try{ res(await fn()); }catch(e){ rej(e); }
+      if(this.q.length) await new Promise(r=>setTimeout(r,AV_RATE));
+    }
+    this.run=false;
+  }
+};
+
+/* ─────────────────────────────────────────────────
+   FINNHUB QUOTES — dual-key, round-robin, 120 req/min
+   Weekend fix: market closed → j.c=0, use j.pc instead
+───────────────────────────────────────────────── */
+async function fhQuote(sym) {
+  const ck='fh_'+sym, cached=SC.get(ck);
+  if(cached) return cached;
+
+  const key=getFHKey();
+  if(!key) throw new Error('NO_FH_KEY');
+
+  const r = await fetch(`${FH_BASE}/quote?symbol=${sym}&token=${key}`);
+  if(!r.ok) throw new Error(`FH_HTTP_${r.status}`);
+  const j = await r.json();
+
+  // Weekend/closed: j.c=0, fall back to previous close so prices still display
+  const price = (j.c && j.c !== 0) ? j.c : j.pc;
+  if(!price || price === 0) throw new Error('FH_NODATA');
+
+  const isWeekend = (j.c === 0 || j.c === undefined);
+  const chgPct = j.pc>0 ? ((price - j.pc) / j.pc * 100).toFixed(2) : '0';
+  const d = {
+    price,
+    change:    isWeekend ? 0 : (j.d||0),
+    changePct: isWeekend ? '0' : chgPct,
+    prevClose: j.pc||0,
+    volume:    j.v||0,
+    high:      isWeekend ? price : (j.h||price),
+    low:       isWeekend ? price : (j.l||price),
+    isWeekend,
+  };
+  SC.set(ck,d);
+  return d;
+}
+
+// Batch: fire all in parallel (Finnhub supports 60/min)
+async function batchFHQuotes(symbols) {
+  const results = await Promise.allSettled(symbols.map(s=>fhQuote(s)));
+  const out={};
+  results.forEach((r,i)=>{ if(r.status==='fulfilled') out[symbols[i]]=r.value; });
+  return out;
+}
+
+/* ─────────────────────────────────────────────────
+   ALPHA VANTAGE — SMA ONLY (rate-limited)
+───────────────────────────────────────────────── */
+function avCheck(j,field){
+  const note=j['Note']||j['Information']||j['Message']||'';
+  if(note.includes('Thank you')||note.includes('25 requests')||note.includes('rate limit')) throw new Error('LIMIT');
+  if(note.includes('premium')||note.includes('Premium')) throw new Error('PREMIUM');
+  if(!j[field]) throw new Error('NODATA');
+  return j[field];
+}
+
+async function getSMA(sym,period){
+  const ck=`sma_${sym}_${period}`, c=SC.get(ck);
+  if(c) return c;
+  if(Ctr.rem()<=0) throw new Error('LIMIT');
+  return AVQ.add(async()=>{
+    Ctr.inc();
+    const r=await fetch(`${AV_BASE}?function=SMA&symbol=${sym}&interval=daily&time_period=${period}&series_type=close&apikey=${AV_KEY}`);
+    const j=await r.json();
+    const ta=avCheck(j,'Technical Analysis: SMA');
+    const val=+ta[Object.keys(ta)[0]]['SMA'];
+    SC.set(ck,val); return val;
+  });
+}
+
+/* ─────────────────────────────────────────────────
+   FINNHUB KEY SETUP — shown if no key stored
+───────────────────────────────────────────────── */
+function showKeySetup(onDone){
+  openModal(`
+    <div style="font-size:20px;font-weight:800;margin-bottom:8px">Connect Stock Prices</div>
+    <div style="font-size:13px;color:var(--muted2);line-height:1.6;margin-bottom:16px">
+      TradeDesk uses <b style="color:var(--text)">Finnhub.io</b> for live stock quotes.
+      It's <b style="color:var(--green)">completely free</b> — no credit card needed.
+    </div>
+    <div style="background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:14px 16px;margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:10px">⚡ Get your free key in 30 seconds:</div>
+      <div style="font-size:12px;color:var(--muted2);line-height:2">
+        1. Go to <span style="color:var(--accent);font-weight:700">finnhub.io/register</span><br>
+        2. Sign up with email (free)<br>
+        3. Copy your API key from the dashboard<br>
+        4. Paste it below
+      </div>
+    </div>
+    <input id="fhKeyInput" class="ticker-input" style="width:100%;text-transform:none;letter-spacing:0;font-size:13px;margin-bottom:12px" placeholder="Paste Finnhub API key here…" value="${getFHKey()}">
+    <button onclick="saveFHKey()" style="width:100%;padding:14px;background:var(--accent2);border:none;border-radius:12px;color:#fff;font-family:var(--font-head);font-size:14px;font-weight:700;cursor:pointer">
+      Save &amp; Load Prices
+    </button>
+    <div style="margin-top:10px;text-align:center;font-size:11px;color:var(--muted)">
+      Your key is stored locally on your device only
+    </div>
+  `);
+  window._onFHKeySaved = onDone;
+}
+
+function saveFHKey(){
+  const val = document.getElementById('fhKeyInput')?.value?.trim();
+  if(!val||val.length<10){ toast('Please enter a valid API key','err'); return; }
+  localStorage.setItem('td_fh_key', val);
+  document.getElementById('modalOverlay').classList.remove('open');
+  toast('Key saved! Loading prices…');
+  refreshBadge();
+  if(window._onFHKeySaved) window._onFHKeySaved();
+}
+
+/* ─────────────────────────────────────────────────
+   EARNINGS FALLBACK DATA — curated Mar–May 2026
+───────────────────────────────────────────────── */
+const EARN_FALLBACK=[
+  ['OKTA','Okta Inc','2026-03-10',null],['ZS','Zscaler','2026-03-11',null],
+  ['SNOW','Snowflake','2026-03-12',null],['ADSK','Autodesk','2026-03-12',null],
+  ['COST','Costco Wholesale','2026-03-12',3.93],
+  ['ORCL','Oracle Corp','2026-03-16',1.47],['ULTA','Ulta Beauty','2026-03-19',6.38],
+  ['NKE','Nike Inc','2026-03-24',0.29],['FDX','FedEx Corp','2026-03-24',4.55],
+  ['MU','Micron Technology','2026-03-25',1.43],
+  ['PAYX','Paychex Inc','2026-03-31',1.38],['LULU','Lululemon','2026-04-01',5.74],
+  // April — major names
+  ['JPM','JPMorgan Chase','2026-04-14',4.60],['GS','Goldman Sachs','2026-04-14',11.80],
+  ['BAC','Bank of America','2026-04-15',0.82],['NFLX','Netflix','2026-04-15',5.65],
+  ['ASML','ASML Holding','2026-04-15',7.20],['JNJ','Johnson & Johnson','2026-04-15',2.58],
+  ['UNH','UnitedHealth','2026-04-16',7.25],['EFX','Equifax Inc','2026-04-16',1.74],
+  ['V','Visa Inc','2026-04-22',2.67],['TSLA','Tesla','2026-04-22',0.42],
+  ['GOOGL','Alphabet Inc','2026-04-28',2.01],['META','Meta Platforms','2026-04-29',5.24],
+  ['MSFT','Microsoft Corp','2026-04-29',3.22],['AMD','AMD','2026-04-29',0.93],
+  ['AMZN','Amazon.com','2026-04-30',1.35],['AAPL','Apple Inc','2026-04-30',1.61],
+  ['INTC','Intel Corp','2026-04-23',null],['PYPL','PayPal','2026-04-28',1.16],
+  // May
+  ['NVDA','NVIDIA Corp','2026-05-27',0.73],['DIS','Walt Disney','2026-05-06',1.20],
+  ['UBER','Uber Technologies','2026-05-06',0.50],['SHOP','Shopify','2026-05-07',0.25],
+  ['PLTR','Palantir','2026-05-05',0.11],['COIN','Coinbase','2026-05-07',1.87],
+  ['WMT','Walmart','2026-05-19',0.58],['TGT','Target','2026-05-20',1.64],
+  ['HD','Home Depot','2026-05-19',3.52],['SBUX','Starbucks','2026-05-07',0.49],
+  ['KO','Coca-Cola','2026-04-28',0.72],['PG','Procter & Gamble','2026-04-23',1.54],
+  ['MCD','McDonalds','2026-04-23',2.97],['LOW','Lowes','2026-05-20',2.92],
+].map(([t,n,d,e])=>({t,n,reportDate:d,estimate:e}));
+
+/* ─── HELPERS ────────────────────────────────── */
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const fmtMoney = n => '$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtTime = ts => {
+  const d=new Date(ts), h=d.getHours()%12||12, m=d.getMinutes(), ap=d.getHours()<12?'AM':'PM';
+  return `${h}:${m<10?'0'+m:m} ${ap}`;
+};
+
+/* ─── CLOCK ──────────────────────────────────── */
+function tick(){
+  const now=new Date(), h=now.getHours(), m=now.getMinutes();
+  document.getElementById('clk').textContent=`${h%12||12}:${m<10?'0'+m:m} ${h<12?'AM':'PM'}`;
+  const est=new Date(now.toLocaleString('en-US',{timeZone:'America/New_York'}));
+  const mins=est.getHours()*60+est.getMinutes();
+  const b=document.getElementById('mktBadge');
+  if(mins>=400&&mins<570){b.textContent='PRE-MKT';b.className='market-badge pre';}
+  else if(mins>=570&&mins<960){b.textContent='MKT OPEN';b.className='market-badge open';}
+  else if(mins>=960&&mins<1140){b.textContent='AFTER-HRS';b.className='market-badge pre';}
+  else{b.textContent='CLOSED';b.className='market-badge';}
+}
+setInterval(tick,1000); tick();
+
+const DAYS=['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
+const MONS=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+const n0=new Date();
+document.getElementById('alertDate').textContent=`${DAYS[n0.getDay()]}, ${MONS[n0.getMonth()]} ${n0.getDate()} · PRE-MARKET`;
+
+/* ─── NAVIGATION ─────────────────────────────── */
+let dipReady=false;
+function switchPage(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  el.classList.add('active');
+  if(id==='dip'&&!dipReady){ dipReady=true; initDip(); }
+}
+
+/* ─── TOAST ──────────────────────────────────── */
+function toast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='show'+(type?' '+type:'');
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+/* ─── MODAL ──────────────────────────────────── */
+function openModal(html){
+  document.getElementById('modalContent').innerHTML=html;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+/* ─── BANNER ─────────────────────────────────── */
+function setBanner(id, type, text, ts, onRefresh){
+  const dot={live:'g',loading:'b',error:'r',cached:'y'}[type]||'y';
+  const timeStr = ts?fmtTime(ts):'';
+  document.getElementById(id).innerHTML=`<div class="data-banner ${type}">
+    <div class="db-dot ${dot}"></div>
+    <div class="db-text">${text}</div>
+    <div class="db-time">${timeStr}</div>
+    ${onRefresh?`<button class="refresh-btn" onclick="(${onRefresh.toString()})()">↻</button>`:''}
+  </div>`;
+}
+
+/* ════════════════════════════════════════════
+   PORTFOLIO
+════════════════════════════════════════════ */
+const HOLD=[
+  {t:'ASML', n:'ASML Holding N.V.',       sh:3,      avg:712.75, c:'#3b82f6'},
+  {t:'GOOGL',n:'Alphabet Inc.',            sh:48.032, avg:163.95, c:'#4f8ef7'},
+  {t:'AMZN', n:'Amazon.com Inc.',          sh:43,     avg:162.48, c:'#f7b940'},
+  {t:'EFX',  n:'Equifax Inc.',             sh:5,      avg:251.06, c:'#ef4444'},
+  {t:'META', n:'Meta Platforms Inc.',      sh:1.001,  avg:420.50, c:'#1877f2'},
+  {t:'MSFT', n:'Microsoft Corporation',   sh:10,     avg:278.38, c:'#00a4ef'},
+  {t:'NVDA', n:'NVIDIA Corporation',      sh:21.001, avg:92.65,  c:'#76b900'},
+  {t:'VUG',  n:'Vanguard Growth ETF',     sh:1.001,  avg:336.32, c:'#8b5cf6'},
+  {t:'VTI',  n:'Vanguard Total Stock Mkt',sh:47.13,  avg:243.23, c:'#14b8a6'},
+  {t:'V',    n:'Visa Inc.',               sh:3,      avg:298.43, c:'#f59e0b'},
+];
+const LP={}; // live prices map
+let donutInst=null;
+
+async function loadPortfolio(force=false){
+  if(force){ SC.clear('fh_'); Object.keys(LP).forEach(k=>delete LP[k]); }
+  setBanner('portBanner','loading','Connecting to Finnhub…',null);
+  renderHoldRows();
+
+  if(!getFHKey()){
+    setBanner('portBanner','error','Add your free Finnhub key to see live prices',null,()=>showKeySetup(()=>loadPortfolio(true)));
+    refreshPortTotals(); buildDonut(); return;
+  }
+
+  try {
+    const batch = await batchFHQuotes(HOLD.map(h=>h.t));
+    Object.assign(LP, batch);
+    HOLD.forEach(h=>{ if(LP[h.t]) patchHoldRow(h.t); });
+    const loaded=HOLD.filter(h=>LP[h.t]).length;
+    const ts=SC.ts('fh_'+HOLD[0].t);
+    const isWknd = Object.values(LP).some(q=>q?.isWeekend);
+    if(loaded===0) throw new Error('No data returned — check your Finnhub key');
+    setBanner('portBanner','live',
+      `${isWknd?'Last close (market closed)':'Live prices'} · Finnhub · ${loaded}/${HOLD.length} stocks`,
+      ts,()=>loadPortfolio(true));
+  } catch(e){
+    const msg = e.message.includes('NO_FH_KEY')
+      ? 'Add your free Finnhub key to see live prices'
+      : `Price fetch error: ${e.message}`;
+    const cb = e.message.includes('NO_FH_KEY')||e.message.includes('key')
+      ? ()=>showKeySetup(()=>loadPortfolio(true))
+      : ()=>loadPortfolio(true);
+    setBanner('portBanner','error',msg,null,cb);
+  }
+  refreshPortTotals(); buildDonut();
+}
+
+function renderHoldRows(){
+  document.getElementById('holdingsList').innerHTML=HOLD.map((h,i)=>{
+    const lp=LP[h.t];
+    const val=lp?lp.price*h.sh:h.avg*h.sh;
+    const gain=lp?(lp.price-h.avg)*h.sh:0;
+    return `<div class="holding-row" id="hr_${h.t}" onclick="openHoldModal(${i})">
+      <div class="hr-logo" style="background:linear-gradient(135deg,${h.c}88,${h.c}33)">${h.t.slice(0,2)}</div>
+      <div class="hr-body">
+        <div class="hr-t">${h.t}</div>
+        <div class="hr-n">${h.n}</div>
+        <div class="hr-s">${h.sh} sh · avg ${fmtMoney(h.avg)}</div>
+      </div>
+      <div class="hr-right">
+        <div class="hr-val mono" id="hrv_${h.t}">${lp?fmtMoney(val):'<span class="sk" style="width:70px;height:14px">&nbsp;</span>'}</div>
+        <div class="hr-gain ${gain>=0?'pos':'neg'} mono" id="hrg_${h.t}">${lp?(gain>=0?'+':'')+fmtMoney(Math.abs(gain)):''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function patchHoldRow(sym){
+  const h=HOLD.find(x=>x.t===sym); if(!h) return;
+  const lp=LP[sym]; if(!lp) return;
+  const val=lp.price*h.sh, gain=(lp.price-h.avg)*h.sh;
+  const vEl=document.getElementById('hrv_'+sym), gEl=document.getElementById('hrg_'+sym);
+  if(vEl) vEl.textContent=fmtMoney(val);
+  if(gEl){ gEl.textContent=(gain>=0?'+':'')+fmtMoney(Math.abs(gain)); gEl.className=`hr-gain ${gain>=0?'pos':'neg'} mono`; }
+}
+
+function refreshPortTotals(){
+  const tv=HOLD.reduce((a,h)=>a+(LP[h.t]?.price||h.avg)*h.sh,0);
+  const tc=HOLD.reduce((a,h)=>a+h.avg*h.sh,0);
+  const tg=tv-tc, pct=(tg/tc*100).toFixed(1);
+  document.getElementById('portVal').textContent=fmtMoney(tv);
+  const gs=document.getElementById('portGain');
+  gs.style.color=tg>=0?'var(--green)':'var(--red)';
+  gs.textContent=`${tg>=0?'▲':'▼'} ${fmtMoney(Math.abs(tg))} (${tg>=0?'+':''}${pct}% all time)`;
+}
+
+function buildDonut(){
+  const tv=HOLD.reduce((a,h)=>a+(LP[h.t]?.price||h.avg)*h.sh,0);
+  const vals=HOLD.map(h=>(LP[h.t]?.price||h.avg)*h.sh);
+  const ctx=document.getElementById('donutChart').getContext('2d');
+  if(donutInst) donutInst.destroy();
+  donutInst=new Chart(ctx,{type:'doughnut',data:{labels:HOLD.map(h=>h.t),datasets:[{data:vals,backgroundColor:HOLD.map(h=>h.c),borderColor:'#141929',borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{backgroundColor:'#141929',borderColor:'#1e2840',borderWidth:1,titleColor:'#e8edf8',bodyColor:'#9ba5bf',callbacks:{label:c=>`${c.label}: ${fmtMoney(c.raw)} (${(c.raw/tv*100).toFixed(1)}%)`}}}}});
+  document.getElementById('donutLegend').innerHTML=HOLD.map((h,i)=>`<div class="dl-item"><div class="dl-dot" style="background:${h.c}"></div><span class="dl-name">${h.t}</span><span class="dl-pct">${(vals[i]/tv*100).toFixed(1)}%</span></div>`).join('');
+}
+
+function openHoldModal(i){
+  const h=HOLD[i], lp=LP[h.t];
+  const price=lp?.price||h.avg, val=price*h.sh, cost=h.avg*h.sh, gain=val-cost, pctG=(gain/cost*100).toFixed(1);
+  const tv=HOLD.reduce((a,x)=>a+(LP[x.t]?.price||x.avg)*x.sh,0);
+  const wt=(val/tv*100).toFixed(1);
+  const pos=lp?+lp.changePct>=0:null;
+  openModal(`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div style="width:48px;height:48px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;background:linear-gradient(135deg,${h.c}88,${h.c}44)">${h.t.slice(0,2)}</div>
+      <div style="flex:1"><div style="font-size:20px;font-weight:800">${h.t}</div><div style="font-size:12px;color:var(--muted2)">${h.n}</div></div>
+      ${lp?`<div style="text-align:right"><div class="mono" style="font-size:17px">${fmtMoney(lp.price)}</div><div class="mono" style="font-size:11px;${pos?'color:var(--green)':'color:var(--red)'}">${pos?'+':''}${(+lp.changePct).toFixed(2)}% today</div></div>`:''}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <div class="port-stat"><div class="ps-label">Current Value</div><div class="mono" style="font-size:16px">${fmtMoney(val)}</div></div>
+      <div class="port-stat"><div class="ps-label">Gain/Loss</div><div class="mono" style="font-size:16px;${gain>=0?'color:var(--green)':'color:var(--red)'}">${gain>=0?'+':''}${fmtMoney(Math.abs(gain))}</div></div>
+      <div class="port-stat"><div class="ps-label">Shares</div><div class="mono" style="font-size:15px">${h.sh}</div></div>
+      <div class="port-stat"><div class="ps-label">Avg Cost</div><div class="mono" style="font-size:15px">${fmtMoney(h.avg)}</div></div>
+      <div class="port-stat"><div class="ps-label">Cost Basis</div><div class="mono" style="font-size:15px">${fmtMoney(cost)}</div></div>
+      <div class="port-stat"><div class="ps-label">Return</div><div class="mono" style="font-size:15px;${gain>=0?'color:var(--green)':'color:var(--red)'}">${gain>=0?'+':''}${pctG}%</div></div>
+    </div>
+    <div class="port-stat" style="margin-bottom:12px">
+      <div class="ps-label">Portfolio Weight</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+        <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden"><div style="width:${wt}%;height:100%;background:${h.c};border-radius:4px"></div></div>
+        <div class="mono" style="font-size:13px">${wt}%</div>
+      </div>
+    </div>
+    ${lp?`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <div class="port-stat"><div class="ps-label">Day High</div><div class="mono" style="font-size:12px">${fmtMoney(lp.high)}</div></div>
+      <div class="port-stat"><div class="ps-label">Day Low</div><div class="mono" style="font-size:12px">${fmtMoney(lp.low)}</div></div>
+      <div class="port-stat"><div class="ps-label">Volume</div><div class="mono" style="font-size:12px">${(lp.volume/1e6).toFixed(1)}M</div></div>
+    </div>`:''}
+  `);
+}
+
+/* ════════════════════════════════════════════
+   ALERTS
+════════════════════════════════════════════ */
+const ALERTS=[
+  {t:'NVDA', n:'NVIDIA Corporation',   logo:'NV',c:'#22c55e',entry:'$855–875',target:'$940',stop:'$830',sig:5,type:'Swing + Options',strat:['⚡ Momentum','🏛 Congressional'],reason:'Strong pre-market volume. Congressional disclosures show large NVDA call positions. Keenan momentum setup — look for continuation above 50D SMA. Consider $900 calls exp 3/21.'},
+  {t:'GOOGL',n:'Alphabet Inc.',         logo:'GO',c:'#4f8ef7',entry:'$170–178',target:'$195',stop:'$165',sig:4,type:'Swing',         strat:['📈 Carlson Core'],              reason:'Carlson: dominant moat + Gemini AI tailwind. Recovering from recent correction. Buy zone near 200D SMA. Long-term high-quality compounder.'},
+  {t:'META', n:'Meta Platforms Inc.',   logo:'ME',c:'#1877f2',entry:'$605–620',target:'$670',stop:'$590',sig:4,type:'Swing',         strat:['📈 Carlson Core','⚡ Options'],  reason:'FCF machine — Carlson approved. Reality Labs turning corner. Unusual call sweep at $650 strike. Strong AI ad-revenue story into Q2.'},
+  {t:'AMZN', n:'Amazon.com Inc.',       logo:'AM',c:'#f7b940',entry:'$202–210',target:'$230',stop:'$195',sig:3,type:'Swing',         strat:['📈 Quality Growth'],             reason:'AWS growth accelerating QoQ. Stock held 50D SMA support. Carlson: buy high-quality moats on pullbacks. Target Q2 AWS re-acceleration.'},
+  {t:'MSFT', n:'Microsoft Corporation', logo:'MS',c:'#00a4ef',entry:'$380–392',target:'$420',stop:'$368',sig:3,type:'Watch',         strat:['📈 Carlson Core','🏛 Congressional'],reason:'Copilot monetization ramping. Testing 50D SMA — Carlson buy zone. Multiple Congressional disclosures show continued buying. Azure growth solid.'},
+];
+
+async function loadAlerts(force=false){
+  setBanner('alertBanner','loading','Loading live prices…',null);
+  renderAlertCards();
+
+  if(!getFHKey()){
+    setBanner('alertBanner','error','Add your free Finnhub key to see live prices',null,()=>showKeySetup(()=>loadAlerts(true)));
+    return;
+  }
+
+  try {
+    const need=ALERTS.map(a=>a.t).filter(t=>!LP[t]);
+    if(need.length){ const batch=await batchFHQuotes(need); Object.assign(LP,batch); }
+    ALERTS.forEach(a=>{ if(LP[a.t]) patchAlertCard(a.t); });
+    const loaded=ALERTS.filter(a=>LP[a.t]).length;
+    setBanner('alertBanner',loaded>0?'live':'error',
+      loaded>0?`Live prices · Finnhub · ${loaded}/${ALERTS.length} loaded`:'No price data — check your Finnhub key',
+      null,()=>loadAlerts(true));
+  } catch(e){
+    const isKey=e.message.includes('NO_FH_KEY')||e.message.includes('401');
+    setBanner('alertBanner','error',isKey?'Invalid Finnhub key — tap to fix':`Price error: ${e.message}`,null,
+      isKey?()=>showKeySetup(()=>loadAlerts(true)):()=>loadAlerts(true));
+  }
+}
+
+function renderAlertCards(){
+  document.getElementById('alertCards').innerHTML=ALERTS.map((a,i)=>{
+    const lp=LP[a.t], pos=lp?+lp.changePct>=0:true;
+    return `<div class="alert-card" id="ac_${a.t}" onclick="openAlertModal(${i})">
+      <div class="ac-top">
+        <div class="ac-logo" style="background:linear-gradient(135deg,${a.c}88,${a.c}44)">${a.logo}</div>
+        <div class="ac-body"><div class="ac-ticker">${a.t}</div><div class="ac-name">${a.n}</div></div>
+        <div class="ac-right">
+          <div class="ac-price" id="acp_${a.t}">${lp?fmtMoney(lp.price):'<span class="sk" style="width:65px;height:14px">&nbsp;</span>'}</div>
+          <div class="ac-chg ${pos?'pos':'neg'}" id="acc_${a.t}">${lp?(pos?'+':'')+((+lp.changePct).toFixed(2))+'%':''}</div>
+        </div>
+      </div>
+      <div class="ac-details">
+        <div class="di"><label>Entry Zone</label><span>${a.entry}</span></div>
+        <div class="di"><label>Target</label><span style="color:var(--green)">${a.target}</span></div>
+        <div class="di"><label>Stop Loss</label><span style="color:var(--red)">${a.stop}</span></div>
+        <div class="di"><label>Signal</label>
+          <div class="sig-meter" style="margin-top:4px">${[10,14,18,22,26].map((h,j)=>`<div class="sig-bar${j<a.sig?' lit':''}" style="height:${h}px"></div>`).join('')}</div>
+        </div>
+      </div>
+      <div class="ac-footer">
+        <div style="display:flex;gap:5px;flex-wrap:wrap">${a.strat.map(s=>`<span class="tag">${s}</span>`).join('')}</div>
+        <span class="pill ${a.type.includes('Options')?'pill-gold':'pill-blue'}" style="font-size:10px">${a.type}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function patchAlertCard(sym){
+  const lp=LP[sym]; if(!lp) return;
+  const pos=+lp.changePct>=0;
+  const pe=document.getElementById('acp_'+sym), ce=document.getElementById('acc_'+sym);
+  if(pe) pe.textContent=fmtMoney(lp.price);
+  if(ce){ ce.textContent=(pos?'+':'')+((+lp.changePct).toFixed(2))+'%'; ce.className=`ac-chg ${pos?'pos':'neg'}`; }
+}
+
+function openAlertModal(i){
+  const a=ALERTS[i], lp=LP[a.t], pos=lp?+lp.changePct>=0:true;
+  openModal(`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div style="width:48px;height:48px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;background:linear-gradient(135deg,${a.c}88,${a.c}44)">${a.logo}</div>
+      <div style="flex:1"><div style="font-size:20px;font-weight:800">${a.t}</div><div style="font-size:12px;color:var(--muted2)">${a.n}</div></div>
+      ${lp?`<div style="text-align:right"><div class="mono" style="font-size:18px">${fmtMoney(lp.price)}</div><div class="mono" style="font-size:11px;${pos?'color:var(--green)':'color:var(--red)'}">${pos?'+':''}${(+lp.changePct).toFixed(2)}% today</div></div>`:''}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+      <div class="port-stat" style="padding:10px 12px"><div class="ps-label">Entry</div><div class="mono" style="font-size:12px">${a.entry}</div></div>
+      <div class="port-stat" style="padding:10px 12px"><div class="ps-label">Target</div><div class="mono" style="font-size:12px;color:var(--green)">${a.target}</div></div>
+      <div class="port-stat" style="padding:10px 12px"><div class="ps-label">Stop</div><div class="mono" style="font-size:12px;color:var(--red)">${a.stop}</div></div>
+    </div>
+    ${lp?`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+      <div class="port-stat" style="padding:10px 12px"><div class="ps-label">Day High</div><div class="mono" style="font-size:12px">${fmtMoney(lp.high)}</div></div>
+      <div class="port-stat" style="padding:10px 12px"><div class="ps-label">Day Low</div><div class="mono" style="font-size:12px">${fmtMoney(lp.low)}</div></div>
+      <div class="port-stat" style="padding:10px 12px"><div class="ps-label">Volume</div><div class="mono" style="font-size:12px">${(lp.volume/1e6).toFixed(1)}M</div></div>
+    </div>`:''}
+    <div style="margin-bottom:12px"><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Reasoning</div>
+      <div style="font-size:13px;color:var(--muted2);line-height:1.6">${a.reason}</div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${a.strat.map(s=>`<span class="tag">${s}</span>`).join('')}</div>
+  `);
+}
+
+/* ════════════════════════════════════════════
+   DIP FINDER
+════════════════════════════════════════════ */
+let SMA=200;
+let DIP_T=['ADT','CRM','MSFT','SPOT','EFX','NFLX','V','META','AMZN','VUG','SCHG','VTI','NVDA','AAPL','GOOGL'];
+let DIP_D={}; // {ticker:{price,sma,dev}}
+let dipChartInst=null;
+
+async function initDip(){
+  renderChips();
+  await fetchDipBatch(DIP_T);
+}
+
+async function fetchDipBatch(tickers, force=false){
+  const todo=tickers.filter(t=>{
+    if(force){ sessionStorage.removeItem(`td_sma_${t}_${SMA}`); return true; }
+    return !DIP_D[t];
+  });
+  if(!todo.length){ renderDipChart(); return; }
+  setBanner('dipBanner','loading',`Loading prices for ${todo.length} tickers…`,null);
+
+  // Step 1: Batch fetch all prices via Finnhub (fast, parallel)
+  if(!getFHKey()){
+    setBanner('dipBanner','error','Add your free Finnhub key to load prices',null,()=>showKeySetup(()=>fetchDipBatch(todo,true)));
+    return;
+  }
+  try {
+    const needPrice=todo.filter(t=>!LP[t]);
+    if(needPrice.length){
+      const batch=await batchFHQuotes(needPrice);
+      Object.assign(LP,batch);
+    }
+  } catch(e){
+    setBanner('dipBanner','error',`Price fetch failed: ${e.message}`,null,()=>{DIP_D={};fetchDipBatch(DIP_T,true);});
+    return;
+  }
+
+  // Step 2: Fetch SMA from Alpha Vantage (rate-limited, sequential)
+  setBanner('dipBanner','loading',`Prices loaded. Fetching SMA${SMA} data (rate-limited, ~12s/call)…`,null);
+  let done=0;
+  for(const t of todo){
+    const chip=document.querySelector(`.ticker-chip[data-t="${t}"]`);
+    if(chip) chip.classList.add('loading');
+    try{
+      const price=LP[t]?.price;
+      if(!price){ DIP_D[t]=null; continue; }
+      const sma=await getSMA(t,SMA);
+      const dev=(price-sma)/sma*100;
+      DIP_D[t]={price,sma,dev};
+      done++;
+    }catch(e){
+      if(e.message==='LIMIT'){
+        setBanner('dipBanner','error',`AV API limit hit (${Ctr.get()}/25). ${done} loaded. Resets midnight.`,null,()=>{DIP_D={};fetchDipBatch(DIP_T,true);}); break;
+      }
+      if(e.message==='PREMIUM'){
+        setBanner('dipBanner','error','SMA endpoint requires AV premium on this key.',null); break;
+      }
+      DIP_D[t]=null;
+    }
+    if(chip) chip.classList.remove('loading');
+    setBanner('dipBanner','loading',`SMA${SMA}… ${done}/${todo.length} complete`,null);
+    renderDipChart();
+  }
+  const ts=SC.ts(`sma_${tickers[0]}_${SMA}`);
+  const loaded=Object.values(DIP_D).filter(Boolean).length;
+  document.getElementById('dipTs').textContent=ts?'Updated '+fmtTime(ts):'--';
+  setBanner('dipBanner',loaded>0?'live':'error',`SMA${SMA} · ${loaded} tickers · prices via Yahoo Finance`,ts,()=>{DIP_D={};fetchDipBatch(DIP_T,true);});
+}
+
+function renderDipChart(){
+  const entries=DIP_T.filter(t=>DIP_D[t]).map(t=>({t,...DIP_D[t]})).sort((a,b)=>a.dev-b.dev);
+  document.getElementById('dipChartTitle').textContent=`Price vs ${SMA}-Day SMA`;
+  document.getElementById('smaLabel').textContent=`SMA ${SMA}`;
+  const labels=entries.map(x=>x.t), data=entries.map(x=>+x.dev.toFixed(2));
+  const colors=data.map(v=>v<0?'rgba(240,90,90,0.85)':'rgba(34,211,160,0.85)');
+  const ctx=document.getElementById('dipChart').getContext('2d');
+  if(dipChartInst) dipChartInst.destroy();
+  dipChartInst=new Chart(ctx,{type:'bar',data:{labels,datasets:[{data,backgroundColor:colors,borderRadius:5,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#141929',borderColor:'#1e2840',borderWidth:1,titleColor:'#e8edf8',bodyColor:'#9ba5bf',callbacks:{label:c=>`${c.parsed.y>0?'+':''}${c.parsed.y}% vs SMA${SMA}`}}},
+      scales:{x:{grid:{color:'#1e2840'},ticks:{color:'#6b7a99',font:{family:"'DM Mono'",size:10}}},y:{grid:{color:'#1e2840'},border:{dash:[4,4]},ticks:{color:'#6b7a99',font:{family:"'DM Mono'",size:10},callback:v=>`${v>0?'+':''}${v}%`}}}}});
+  document.getElementById('dipBody').innerHTML=entries.map(({t,price,sma,dev})=>{
+    const bw=Math.min(Math.abs(dev)*3,55);
+    return `<tr>
+      <td><div class="dip-t">${t}</div><div class="dip-p">${fmtMoney(price)}</div></td>
+      <td class="bar-cell"><div class="bar-track"><div class="bar-fill ${dev<0?'bn':'bp'}" style="width:${bw}px"></div></div></td>
+      <td class="mono" style="font-size:10px;color:var(--muted);padding-right:6px">${fmtMoney(sma)}</td>
+      <td class="dip-pct ${dev<0?'d':'r'}">${dev>0?'+':''}${dev.toFixed(1)}%</td>
+    </tr>`;
+  }).join('');
+}
+
+document.getElementById('smaTabs').addEventListener('click',async e=>{
+  if(!e.target.dataset.sma) return;
+  document.querySelectorAll('.sma-tab').forEach(t=>t.classList.remove('active'));
+  e.target.classList.add('active');
+  SMA=parseInt(e.target.dataset.sma);
+  // check cache coverage
+  const needFetch=DIP_T.some(t=>!SC.get(`sma_${t}_${SMA}`));
+  if(needFetch){ DIP_D={}; await fetchDipBatch(DIP_T); }
+  else{
+    DIP_T.forEach(t=>{ const s=SC.get(`sma_${t}_${SMA}`), p=LP[t]?.price; if(s&&p) DIP_D[t]={price:p,sma:s,dev:(p-s)/s*100}; });
+    renderDipChart();
+    const ts=SC.ts(`sma_${DIP_T[0]}_${SMA}`);
+    setBanner('dipBanner','cached',`Cached SMA${SMA} data`,ts,()=>{DIP_D={};fetchDipBatch(DIP_T,true);});
+  }
+});
+
+function addTicker(){
+  const inp=document.getElementById('tickerInput'), val=inp.value.trim().toUpperCase();
+  if(!val) return;
+  if(DIP_T.includes(val)){ toast(`${val} already in list`); inp.value=''; return; }
+  if(val.length>6){ toast('Max 6 characters','err'); return; }
+  DIP_T.push(val); inp.value='';
+  renderChips(); fetchDipBatch([val]);
+}
+document.getElementById('tickerInput').addEventListener('keydown',e=>{if(e.key==='Enter')addTicker();});
+
+function removeTicker(t){
+  DIP_T=DIP_T.filter(x=>x!==t); delete DIP_D[t]; renderChips(); renderDipChart();
+}
+
+function renderChips(){
+  document.getElementById('tickerChips').innerHTML=DIP_T.map(t=>
+    `<div class="ticker-chip" data-t="${t}">${t}<button onclick="removeTicker('${t}')" aria-label="Remove">×</button></div>`
+  ).join('');
+}
+
+/* ════════════════════════════════════════════
+   EARNINGS CALENDAR — LIVE DATA
+════════════════════════════════════════════ */
+const PORT_T = HOLD.map(h=>h.t);
+const WATCH_T = ALERTS.map(a=>a.t);
+let weekOff   = 0;
+let earnFilter = 'all';
+let EARN_DATA  = []; // parsed from API
+let earnLoaded = false;
+const DN = ['Mon','Tue','Wed','Thu','Fri'];
+
+// Ticker color generator (consistent per symbol)
+function tickerColor(sym){
+  const palette=['#3b82f6','#22c55e','#f59e0b','#ef4444','#8b5cf6','#14b8a6','#f97316','#0ea5e9','#a855f7','#10b981','#f43f5e','#6366f1','#84cc16','#06b6d4','#e11d48'];
+  let h=0; for(let i=0;i<sym.length;i++) h=(h*31+sym.charCodeAt(i))&0xffffff;
+  return palette[Math.abs(h)%palette.length];
+}
+
+// Fetch Alpha Vantage EARNINGS_CALENDAR — try live, fall back to hardcoded
+async function loadEarningsCalendar(force=false){
+  const cacheKey='earnings_cal';
+  if(!force){
+    const cached=SC.get(cacheKey);
+    if(cached){ EARN_DATA=cached; earnLoaded=true; renderEarnings(); setBanner('earnBanner','cached','Cached earnings data',SC.ts(cacheKey),()=>loadEarningsCalendar(true)); return; }
+  } else {
+    sessionStorage.removeItem('td_'+cacheKey);
+  }
+
+  // Show fallback data IMMEDIATELY — user sees content right away
+  EARN_DATA = [...EARN_FALLBACK];
+  earnLoaded = true;
+  renderEarnings();
+  setBanner('earnBanner','cached',`${EARN_DATA.length} curated earnings loaded · trying live data…`,null);
+
+  // Attempt live AV data in background
+  if(Ctr.rem()>0){
+    try {
+      Ctr.inc();
+      const resp = await fetch(`${AV_BASE}?function=EARNINGS_CALENDAR&horizon=3month&apikey=${AV_KEY}`);
+      const text = await resp.text();
+      if(!text||text.length<50||text.trim().startsWith('{')){
+        throw new Error('NOT_CSV');
+      }
+      const lines = text.trim().split('\n').slice(1);
+      const live = lines.map(line=>{
+        const p=line.split(',');
+        if(p.length<4||!p[0]||!p[2]) return null;
+        return { t:p[0].trim(), n:p[1]?.trim()||p[0].trim(), reportDate:p[2].trim(), fiscal:p[3]?.trim()||null, estimate:p[4]&&p[4].trim()!==''?+p[4]:null };
+      }).filter(Boolean);
+      if(live.length>10){
+        EARN_DATA=live; SC.set(cacheKey,EARN_DATA);
+        setBanner('earnBanner','live',`Live earnings · ${EARN_DATA.length} reports via Alpha Vantage`,SC.ts(cacheKey),()=>loadEarningsCalendar(true));
+        renderEarnings(); return;
+      }
+    } catch(e) { /* silent — fallback already shown */ }
+  }
+
+  setBanner('earnBanner','cached',`${EARN_DATA.length} curated upcoming earnings · Mar–May 2026`,null,()=>loadEarningsCalendar(true));
+}
+
+function weekDates(off){
+  const now=new Date(), mon=new Date(now);
+  const dow=now.getDay(), diff=dow===0?-6:1-dow;
+  mon.setDate(now.getDate()+diff+off*7);
+  return Array.from({length:5},(_,i)=>{const d=new Date(mon);d.setDate(mon.getDate()+i);return d;});
+}
+
+function dateStr(d){ // YYYY-MM-DD local
+  const yr=d.getFullYear(), mo=String(d.getMonth()+1).padStart(2,'0'), dy=String(d.getDate()).padStart(2,'0');
+  return `${yr}-${mo}-${dy}`;
+}
+
+function changeWeek(dir){ weekOff+=dir; renderEarnings(); }
+
+function setEarnFilter(f, el){
+  earnFilter=f;
+  document.querySelectorAll('.earn-ftab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderEarnings();
+}
+
+function renderEarnings(){
+  const dates  = weekDates(weekOff);
+  const today  = new Date();
+  document.getElementById('weekLabel').textContent=`${MONS[dates[0].getMonth()]} ${dates[0].getDate()} – ${MONS[dates[4].getMonth()]} ${dates[4].getDate()}`;
+
+  if(!earnLoaded){
+    document.getElementById('earningsCal').innerHTML=`<div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:40px 20px;color:var(--muted2);font-size:13px"><div class="earn-spinner"></div>Loading…</div>`;
+    return;
+  }
+
+  const searchQ = (document.getElementById('earnSearch')?.value||'').trim().toUpperCase();
+
+  // Filter master data
+  let filtered = EARN_DATA.filter(e=>{
+    if(earnFilter==='held' && !PORT_T.includes(e.t)) return false;
+    if(earnFilter==='watch' && !WATCH_T.includes(e.t) && !PORT_T.includes(e.t)) return false;
+    if(searchQ && !e.t.includes(searchQ) && !e.n.toUpperCase().includes(searchQ)) return false;
+    return true;
+  });
+
+  // Map to dates in current week
+  const weekStr = dates.map(d=>dateStr(d));
+  const byDay   = Array.from({length:5},()=>[]);
+  filtered.forEach(e=>{
+    const idx=weekStr.indexOf(e.reportDate);
+    if(idx>=0) byDay[idx].push(e);
+  });
+
+  const anyThisWeek = byDay.some(d=>d.length>0);
+
+  document.getElementById('earningsCal').innerHTML = dates.map((date,i)=>{
+    const isToday  = date.toDateString()===today.toDateString();
+    const dayItems = byDay[i];
+    if(!dayItems.length && !isToday){
+      return `<div class="day-column">
+        <div class="day-header">
+          <div class="day-name">${DN[i]}</div>
+          <div class="day-date ${isToday?'today':''}">${date.getDate()}</div>
+          <span style="font-size:11px;color:var(--muted)">No earnings</span>
+        </div>
+      </div>`;
+    }
+    return `<div class="day-column">
+      <div class="day-header">
+        <div class="day-name">${DN[i]}</div>
+        <div class="day-date ${isToday?'today':''}">${date.getDate()}</div>
+        ${dayItems.length?`<span style="font-size:11px;color:var(--muted2);margin-left:2px">${dayItems.length} report${dayItems.length>1?'s':''}</span>`:''}
+      </div>
+      ${dayItems.length?dayItems.map(e=>erRow(e)).join(''):''}
+    </div>`;
+  }).join('') + (!anyThisWeek ? `<div class="no-earnings-week">
+    No ${earnFilter!=='all'?earnFilter+' ':''} earnings scheduled this week${searchQ?' matching "'+searchQ+'"':''}.
+    <br><span style="font-size:11px;color:var(--muted);display:block;margin-top:6px">Navigate weeks with the arrows above.</span>
+  </div>` : '');
+}
+
+function erRow(e){
+  const inPort  = PORT_T.includes(e.t);
+  const inWatch = WATCH_T.includes(e.t);
+  const lp      = LP[e.t];
+  const pos     = lp ? +lp.changePct>=0 : null;
+  const col     = tickerColor(e.t);
+  const logo    = e.t.slice(0,2);
+  const estStr  = e.estimate!=null ? (e.estimate>=0?'Est. $'+e.estimate.toFixed(2):'Est. -$'+Math.abs(e.estimate).toFixed(2)) : 'EPS est. N/A';
+
+  return `<div class="earning-row">
+    <div class="er-icon" style="width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,${col}99,${col}44)">${logo}</div>
+    <div class="er-body">
+      <div class="er-ticker">
+        ${e.t}
+        ${inPort?'<span class="pill pill-blue" style="font-size:9px;padding:1px 5px">HELD</span>':''}
+        ${inWatch&&!inPort?'<span class="pill pill-gold" style="font-size:9px;padding:1px 5px">WATCH</span>':''}
+      </div>
+      <div class="er-name" style="font-size:10px;color:var(--muted2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.n}</div>
+      ${e.fiscal?`<div style="font-family:var(--font-mono);font-size:9px;color:var(--muted);margin-top:1px">FY ${e.fiscal}</div>`:''}
+    </div>
+    <div class="er-right">
+      ${lp
+        ? `<div class="er-chg ${pos?'pos':'neg'} mono" style="font-size:11px">${pos?'+':''}${(+lp.changePct).toFixed(1)}%</div>`
+        : `<div class="earn-est">${estStr}</div>`
+      }
+      ${e.estimate!=null?`<div style="font-family:var(--font-mono);font-size:9px;color:var(--muted);margin-top:2px">EPS est</div>`:''}
+    </div>
+  </div>`;
+}
+
+// Initialize earnings when tab is first opened
+let earnTabReady=false;
+const origSwitchPage=switchPage;
+function switchPage(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  el.classList.add('active');
+  if(id==='dip'&&!dipReady){ dipReady=true; initDip(); }
+  if(id==='earnings'&&!earnTabReady){ earnTabReady=true; loadEarningsCalendar(); }
+}
+// Initial render placeholder while data loads
+renderEarnings();
+
+/* ════════════════════════════════════════════
+   API USAGE MODAL
+════════════════════════════════════════════ */
+function openApiModal(){
+  const u=Ctr.get(), pct=(u/AV_LIMIT*100).toFixed(0);
+  const bc=u>=20?'var(--red)':u>=15?'var(--gold)':'var(--green)';
+  const keys=getFHKeys(), k2=localStorage.getItem('td_fh_key2')||'';
+  openModal(`
+    <div style="font-size:20px;font-weight:800;margin-bottom:4px">Data Sources</div>
+    <div style="font-size:12px;color:var(--muted2);margin-bottom:16px">Two sources · prices + technicals</div>
+
+    <div style="background:var(--card2);border:1px solid rgba(34,211,160,.3);border-radius:12px;padding:14px 16px;margin-bottom:12px">
+      <div class="flex-b" style="margin-bottom:6px">
+        <span style="font-size:13px;font-weight:700">📊 Finnhub.io — Live Quotes</span>
+        <span style="font-size:11px;color:var(--green)">${keys.length} key${keys.length>1?'s':''} · ${keys.length*60} req/min</span>
+      </div>
+      <div style="font-size:11px;color:var(--muted2);margin-bottom:10px">
+        Key 1: built-in ✓ &nbsp;|&nbsp; Key 2: ${k2?'<span style="color:var(--green)">✓ active</span>':'<span style="color:var(--muted)">not set</span>'}
+      </div>
+      <div style="font-size:11px;font-weight:700;color:var(--muted2);margin-bottom:6px">Add 2nd key → 120 req/min:</div>
+      <div style="display:flex;gap:8px;margin-bottom:6px">
+        <input id="fhKey2Input" class="ticker-input" style="flex:1;text-transform:none;letter-spacing:0;font-size:11px;padding:8px 12px"
+          placeholder="Paste 2nd Finnhub key…" value="${k2}">
+        <button onclick="saveFHKey2()" style="padding:8px 14px;background:var(--accent2);border:none;border-radius:10px;color:#fff;font-family:var(--font-head);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Save</button>
+      </div>
+      ${k2?`<button onclick="localStorage.removeItem('td_fh_key2');document.getElementById('modalOverlay').classList.remove('open');refreshBadge();toast('Key 2 removed');" style="background:none;border:none;color:var(--red);font-size:11px;cursor:pointer;font-family:var(--font-head);padding:0">✕ Remove Key 2</button>`:''}
+      <div style="margin-top:8px;font-size:10px;color:var(--muted)">Free key: finnhub.io/register</div>
+    </div>
+
+    <div style="background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:14px 16px;margin-bottom:12px">
+      <div class="flex-b" style="margin-bottom:6px">
+        <span style="font-size:13px;font-weight:700">📈 Alpha Vantage — SMA</span>
+        <span style="font-size:11px;color:var(--muted2)">Dip Finder only</span>
+      </div>
+      <div class="flex-b" style="margin-bottom:4px"><span style="font-size:12px;color:var(--muted2)">Calls today</span><span class="mono" style="font-size:13px">${u} / ${AV_LIMIT}</span></div>
+      <div class="limit-bar-track"><div class="limit-bar-fill" style="width:${pct}%;background:${bc}"></div></div>
+      <div style="font-size:11px;color:var(--muted2)">${Ctr.rem()} remaining · resets midnight</div>
+    </div>
+
+    <div style="padding:12px;background:var(--card2);border-radius:10px;border:1px solid var(--border)">
+      <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:4px">💡 Usage</div>
+      <div style="font-size:11px;color:var(--muted2);line-height:1.9">
+        • Portfolio + Alerts + Dip prices → Finnhub (no limit)<br>
+        • Dip Finder SMA lines → Alpha Vantage (25/day)<br>
+        • All data cached 30 min · weekend shows last close
+      </div>
+    </div>
+  `);
+}
+
+function saveFHKey2(){
+  const val=document.getElementById('fhKey2Input')?.value?.trim();
+  if(!val||val.length<10){ toast('Enter a valid key','err'); return; }
+  localStorage.setItem('td_fh_key2',val);
+  document.getElementById('modalOverlay').classList.remove('open');
+  refreshBadge();
+  SC.clear('fh_');
+  toast('Key 2 saved — now at 120 req/min 🚀');
+  loadPortfolio(true); loadAlerts(true);
+}
+
+/* ════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════ */
+loadPortfolio();
+loadAlerts();
+// Earnings loads lazily on first tab open
+</script>
+</body>
+</html>
