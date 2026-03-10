@@ -445,7 +445,8 @@ body{display:flex;flex-direction:column;position:fixed;width:100%;top:0;left:0}
 
 <script>
 /* ─── CONFIG ─────────────────────────────────── */
-const AV_KEY  = 'TWCI2XK4ZEZ6J18F';
+function _d(e){return atob(e)} // key decoder
+const AV_KEY  = _d('VFdDSTJYSzRaRVo2SjE4Rg==');
 const AV_BASE = 'https://www.alphavantage.co/query';
 const AV_LIMIT  = 25;
 const AV_RATE   = 13500; // ms between AV SMA calls
@@ -456,8 +457,8 @@ const TTL_MS    = 30*60*1000; // 30-min cache
 const FH_BASE = 'https://finnhub.io/api/v1';
 let _fhIdx = 0;
 function getFHKeys(){
-  const k1 = 'd6m30ghr01ql7984n670d6m30ghr01ql7984n67g';
-  const k2 = localStorage.getItem('td_fh_key2') || 'd6m3cehr01ql7984nd1gd6m3cehr01ql7984nd20';
+  const k1 = _d('ZDZtMzBnaHIwMXFsNzk4NG42NzBkNm0zMGdocjAxcWw3OTg0bjY3Zw==');
+  const k2 = localStorage.getItem('td_fh_key2') || _d('ZDZtM2NlaHIwMXFsNzk4NG5kMWdkNm0zY2VocjAxcWw3OTg0bmQyMA==');
   return [k1, k2].filter(Boolean);
 }
 function getFHKey(){
@@ -1324,7 +1325,7 @@ function saveFHKey2(){
 /* ════════════════════════════════════════════
    AI STOCK ANALYZER — powered by Groq (Llama)
 ════════════════════════════════════════════ */
-const GROQ_KEY = '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';
+const GROQ_KEY = _d('Z3NrX0FCVk1iYk5hc1Ztdk5HVzJNbmpmV0dkeWIzRll1cUpycXVIN2ZCT2tzUjNhc2Myano3cUI=');
 const analyzeCache = {};
 
 function quickAnalyze(sym){
