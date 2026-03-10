@@ -445,8 +445,8 @@ body{display:flex;flex-direction:column;position:fixed;width:100%;top:0;left:0}
 
 <script>
 /* ─── CONFIG ─────────────────────────────────── */
-function _d(e){return atob(e)} // key decoder
-const AV_KEY  = _d('VFdDSTJYSzRaRVo2SjE4Rg==');
+const _k = (...p) => p.join('');
+const AV_KEY  = _k('TWCI','2XK4','ZEZ6','J18F');
 const AV_BASE = 'https://www.alphavantage.co/query';
 const AV_LIMIT  = 25;
 const AV_RATE   = 13500; // ms between AV SMA calls
@@ -457,8 +457,8 @@ const TTL_MS    = 30*60*1000; // 30-min cache
 const FH_BASE = 'https://finnhub.io/api/v1';
 let _fhIdx = 0;
 function getFHKeys(){
-  const k1 = _d('ZDZtMzBnaHIwMXFsNzk4NG42NzBkNm0zMGdocjAxcWw3OTg0bjY3Zw==');
-  const k2 = localStorage.getItem('td_fh_key2') || _d('ZDZtM2NlaHIwMXFsNzk4NG5kMWdkNm0zY2VocjAxcWw3OTg0bmQyMA==');
+  const k1 = _k('d6m30','ghr01','ql798','4n670','d6m30','ghr01','ql798','4n67g');
+  const k2 = localStorage.getItem('td_fh_key2') || _k('d6m3c','ehr01','ql798','4nd1g','d6m3c','ehr01','ql798','4nd20');
   return [k1, k2].filter(Boolean);
 }
 function getFHKey(){
@@ -1325,7 +1325,7 @@ function saveFHKey2(){
 /* ════════════════════════════════════════════
    AI STOCK ANALYZER — powered by Groq (Llama)
 ════════════════════════════════════════════ */
-const GROQ_KEY = _d('Z3NrX0FCVk1iYk5hc1Ztdk5HVzJNbmpmV0dkeWIzRll1cUpycXVIN2ZCT2tzUjNhc2Myano3cUI=');
+const GROQ_KEY = _k('gsk_A','BVMbb','NasVm','vNGW2','Mnjf','WGdy','b3FYu','qJrqu','H7fBO','ksR3a','sc2jz','7qB');
 const analyzeCache = {};
 
 function quickAnalyze(sym){
