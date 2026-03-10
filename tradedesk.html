@@ -1322,8 +1322,9 @@ function saveFHKey2(){
 }
 
 /* ════════════════════════════════════════════
-   AI STOCK ANALYZER — powered by Claude
+   AI STOCK ANALYZER — powered by Groq (Llama)
 ════════════════════════════════════════════ */
+const GROQ_KEY = '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';
 const analyzeCache = {};
 
 function quickAnalyze(sym){
@@ -1338,18 +1339,13 @@ async function analyzeStock(){
   const sym   = input.value.trim().toUpperCase();
   if(!sym) return;
 
-  // Use cache to avoid repeated Claude calls
-  if(analyzeCache[sym]){
-    renderAnalysis(analyzeCache[sym]);
-    return;
-  }
+  if(analyzeCache[sym]){ renderAnalysis(analyzeCache[sym]); return; }
 
-  // Show loading
   btn.disabled = true;
   btn.textContent = '…';
   out.innerHTML = `<div class="ai-loading"><div class="ai-spinner"></div>Analyzing ${sym} with AI…</div>`;
 
-  // Get live price first if available
+  // Get live price first
   let priceStr = '';
   try {
     const q = await fhQuote(sym);
@@ -1358,35 +1354,36 @@ async function analyzeStock(){
   } catch(e){ priceStr = 'Price unavailable.'; }
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${GROQ_KEY}`
+      },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: `You are a sharp stock analyst. When given a ticker, respond ONLY with a JSON object — no markdown, no backticks, no extra text. JSON format:
-{
-  "ticker": "NVDA",
-  "companyName": "NVIDIA Corporation",
-  "rating": 8,
-  "verdict": "Strong Buy",
-  "thesis": "2-3 sentence buy/avoid thesis. Be direct and specific about catalysts, risks, and timing.",
-  "tags": ["AI Exposure", "Momentum", "High Volatility"],
-  "type": "swing"
-}
-rating: 1-10 integer. verdict: one of "Strong Buy", "Buy", "Hold", "Avoid", "Strong Avoid". type: "swing", "longterm", or "both". tags: 2-4 short labels.`,
-        messages: [{
-          role: 'user',
-          content: `Analyze ${sym} as a stock trade or investment. ${priceStr} Give me a rating and thesis.`
-        }]
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 500,
+        temperature: 0.7,
+        messages: [
+          {
+            role: 'system',
+            content: `You are a sharp stock analyst. Respond ONLY with a valid JSON object — no markdown, no backticks, no explanation. Format:
+{"ticker":"NVDA","companyName":"NVIDIA Corporation","rating":8,"verdict":"Strong Buy","thesis":"2-3 sentence buy/avoid thesis with specific catalysts and risks.","tags":["AI Exposure","Momentum","High Volatility"],"type":"swing"}
+rating: 1-10 integer. verdict: "Strong Buy","Buy","Hold","Avoid","Strong Avoid". type: "swing","longterm","both".`
+          },
+          {
+            role: 'user',
+            content: `Analyze ${sym} as a stock trade or investment. ${priceStr} Rate it 1-10 and give a thesis.`
+          }
+        ]
       })
     });
 
     const data = await resp.json();
-    const raw  = data.content?.map(b => b.text||'').join('') || '';
+    const raw  = data.choices?.[0]?.message?.content || '';
     const clean = raw.replace(/```json|```/g,'').trim();
     const result = JSON.parse(clean);
-    result.price = LP[sym]?.price || null;
+    result.price     = LP[sym]?.price || null;
     result.changePct = LP[sym]?.changePct || null;
     analyzeCache[sym] = result;
     renderAnalysis(result);
