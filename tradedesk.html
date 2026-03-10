@@ -291,6 +291,7 @@ body{display:flex;flex-direction:column;position:fixed;width:100%;top:0;left:0}
         <span class="pill pill-blue">🏛 Nancy P</span>
         <span class="pill pill-green">📈 Carlson</span>
         <span class="pill pill-gold">⚡ Keenan</span>
+        <span class="pill" style="background:rgba(99,130,255,.15);color:#a0aaff;border:1px solid rgba(99,130,255,.3);cursor:pointer" onclick="loadAlerts(true)">🤖 Refresh AI</span>
       </div>
     </div>
     <div id="alertBanner"></div>
@@ -858,22 +859,113 @@ function openHoldModal(i){
 }
 
 /* ════════════════════════════════════════════
-   ALERTS
+   ALERTS — AI DAILY PICKS (Groq, cached by date)
 ════════════════════════════════════════════ */
-const ALERTS=[
-  {t:'NVDA', n:'NVIDIA Corporation',   logo:'NV',c:'#22c55e',entry:'$855–875',target:'$940',stop:'$830',sig:5,type:'Swing + Options',strat:['⚡ Momentum','🏛 Congressional'],reason:'Strong pre-market volume. Congressional disclosures show large NVDA call positions. Keenan momentum setup — look for continuation above 50D SMA. Consider $900 calls exp 3/21.'},
-  {t:'GOOGL',n:'Alphabet Inc.',         logo:'GO',c:'#4f8ef7',entry:'$170–178',target:'$195',stop:'$165',sig:4,type:'Swing',         strat:['📈 Carlson Core'],              reason:'Carlson: dominant moat + Gemini AI tailwind. Recovering from recent correction. Buy zone near 200D SMA. Long-term high-quality compounder.'},
-  {t:'META', n:'Meta Platforms Inc.',   logo:'ME',c:'#1877f2',entry:'$605–620',target:'$670',stop:'$590',sig:4,type:'Swing',         strat:['📈 Carlson Core','⚡ Options'],  reason:'FCF machine — Carlson approved. Reality Labs turning corner. Unusual call sweep at $650 strike. Strong AI ad-revenue story into Q2.'},
-  {t:'AMZN', n:'Amazon.com Inc.',       logo:'AM',c:'#f7b940',entry:'$202–210',target:'$230',stop:'$195',sig:3,type:'Swing',         strat:['📈 Quality Growth'],             reason:'AWS growth accelerating QoQ. Stock held 50D SMA support. Carlson: buy high-quality moats on pullbacks. Target Q2 AWS re-acceleration.'},
-  {t:'MSFT', n:'Microsoft Corporation', logo:'MS',c:'#00a4ef',entry:'$380–392',target:'$420',stop:'$368',sig:3,type:'Watch',         strat:['📈 Carlson Core','🏛 Congressional'],reason:'Copilot monetization ramping. Testing 50D SMA — Carlson buy zone. Multiple Congressional disclosures show continued buying. Azure growth solid.'},
+let ALERTS = []; // populated by generateDailyPicks()
+
+// Fallback picks if AI fails
+const ALERTS_FALLBACK = [
+  {t:'NVDA', n:'NVIDIA Corporation',   logo:'NV',c:'#22c55e',entry:'$850–875', target:'$940',stop:'$825',sig:5,type:'Swing + Options',strat:['⚡ Momentum','🏛 Congressional'],reason:'AI infrastructure leader. Strong demand for Blackwell GPUs. Congressional disclosures show accumulation. Watch for continuation above 50D SMA.'},
+  {t:'GOOGL',n:'Alphabet Inc.',         logo:'GO',c:'#4f8ef7',entry:'$170–178', target:'$195',stop:'$165',sig:4,type:'Swing',         strat:['📈 Carlson Core'],              reason:'Gemini AI monetization + Search dominance. Near 200D SMA support. Quality compounder on pullback.'},
+  {t:'META', n:'Meta Platforms Inc.',   logo:'ME',c:'#1877f2',entry:'$560–580', target:'$630',stop:'$545',sig:4,type:'Swing',         strat:['📈 Carlson Core','⚡ Options'],  reason:'Strong FCF, AI-driven ad revenue growth. Reality Labs improving. Unusual call sweep activity.'},
+  {t:'AMZN', n:'Amazon.com Inc.',       logo:'AM',c:'#f7b940',entry:'$195–205', target:'$225',stop:'$188',sig:3,type:'Swing',         strat:['📈 Quality Growth'],            reason:'AWS growth re-accelerating. Held 50D SMA. Carlson approved quality moat on pullback.'},
+  {t:'MSFT', n:'Microsoft Corporation', logo:'MS',c:'#00a4ef',entry:'$375–390', target:'$415',stop:'$362',sig:3,type:'Watch',         strat:['📈 Carlson Core','🏛 Congressional'],reason:'Copilot monetization ramping. Azure growth solid. Multiple Congressional disclosures show continued buying.'},
 ];
 
-async function loadAlerts(force=false){
-  setBanner('alertBanner','loading','Loading live prices…',null);
-  renderAlertCards();
+const PICK_COLORS = ['#22c55e','#4f8ef7','#1877f2','#f7b940','#00a4ef','#a855f7','#14b8a6','#f97316','#ef4444','#8b5cf6'];
 
+async function generateDailyPicks(force=false){
+  const today = new Date().toDateString();
+  const cacheKey = 'td_daily_picks';
+  const cached = localStorage.getItem(cacheKey);
+
+  // Use cache if same day and not forced
+  if(!force && cached){
+    try{
+      const {date, picks} = JSON.parse(cached);
+      if(date === today && picks?.length >= 3){
+        ALERTS = picks;
+        return picks;
+      }
+    }catch{}
+  }
+
+  // Generate via Groq
+  const holdTickers = HOLD.map(h=>h.t).join(', ');
+  const dateStr = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+
+  try {
+    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${GROQ_KEY}` },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 1000,
+        temperature: 0.8,
+        messages: [
+          {
+            role: 'system',
+            content: `You are a professional swing trader and stock analyst. Generate fresh daily top picks. Respond ONLY with a valid JSON array — no markdown, no backticks. Format:
+[
+  {
+    "t": "TICKER",
+    "n": "Full Company Name",
+    "logo": "2-letter abbreviation",
+    "entry": "$000–000",
+    "target": "$000",
+    "stop": "$000",
+    "sig": 4,
+    "type": "Swing",
+    "strat": ["📈 Catalyst", "⚡ Momentum"],
+    "reason": "2-3 sentence specific reasoning with catalyst, setup, and timing."
+  }
+]
+sig: integer 1-5 (signal strength). type: "Swing", "Swing + Options", "Watch", or "Long-Term". strat: 1-3 short strategy tags using emojis. Generate exactly 5 picks.`
+          },
+          {
+            role: 'user',
+            content: `Today is ${dateStr}. Generate 5 fresh top stock picks for swing trades and short-term momentum plays. The user already holds: ${holdTickers} — you can include these if they have strong setups, but mix in other high-momentum names. Consider current market conditions, sector rotation, and near-term catalysts. Make entry zones, targets and stops realistic based on typical price ranges for each stock.`
+          }
+        ]
+      })
+    });
+
+    const data = await resp.json();
+    const raw = data.choices?.[0]?.message?.content || '';
+    const clean = raw.replace(/```json|```/g,'').trim();
+    const picks = JSON.parse(clean);
+
+    if(!Array.isArray(picks) || picks.length < 3) throw new Error('Bad response');
+
+    // Add colors
+    picks.forEach((p,i) => {
+      p.c = PICK_COLORS[i % PICK_COLORS.length];
+      if(!p.logo) p.logo = p.t.slice(0,2);
+    });
+
+    // Cache with today's date
+    localStorage.setItem(cacheKey, JSON.stringify({date: today, picks}));
+    ALERTS = picks;
+    return picks;
+
+  } catch(e) {
+    // Fall back to static picks
+    ALERTS = ALERTS_FALLBACK;
+    return ALERTS_FALLBACK;
+  }
+}
+
+async function loadAlerts(force=false){
+  setBanner('alertBanner','loading','Generating today\'s picks with AI…',null);
+  renderAlertSkeleton();
+
+  // Generate AI picks first
+  await generateDailyPicks(force);
+
+  // Then fetch live prices
   if(!getFHKey()){
     setBanner('alertBanner','error','Add your free Finnhub key to see live prices',null,()=>showKeySetup(()=>loadAlerts(true)));
+    renderAlertCards();
     return;
   }
 
@@ -882,14 +974,32 @@ async function loadAlerts(force=false){
     if(need.length){ const batch=await batchFHQuotes(need); Object.assign(LP,batch); }
     ALERTS.forEach(a=>{ if(LP[a.t]) patchAlertCard(a.t); });
     const loaded=ALERTS.filter(a=>LP[a.t]).length;
-    setBanner('alertBanner',loaded>0?'live':'error',
-      loaded>0?`Live prices · Finnhub · ${loaded}/${ALERTS.length} loaded`:'No price data — check your Finnhub key',
-      null,()=>loadAlerts(true));
+    const cached = (() => { try{ const c=localStorage.getItem('td_daily_picks'); return c?JSON.parse(c):null; }catch{return null;} })();
+    const isToday = cached?.date === new Date().toDateString();
+    setBanner('alertBanner', loaded>0?'live':'cached',
+      loaded>0 ? `AI picks · live prices · ${loaded}/${ALERTS.length} loaded` : 'AI picks loaded · price fetch failed',
+      null, ()=>loadAlerts(true));
   } catch(e){
-    const isKey=e.message.includes('NO_FH_KEY')||e.message.includes('401');
-    setBanner('alertBanner','error',isKey?'Invalid Finnhub key — tap to fix':`Price error: ${e.message}`,null,
-      isKey?()=>showKeySetup(()=>loadAlerts(true)):()=>loadAlerts(true));
+    setBanner('alertBanner','cached','AI picks loaded · price unavailable',null,()=>loadAlerts(true));
   }
+  renderAlertCards();
+}
+
+function renderAlertSkeleton(){
+  document.getElementById('alertCards').innerHTML = [1,2,3,4,5].map(()=>`
+    <div class="alert-card" style="pointer-events:none">
+      <div class="ac-top">
+        <div class="ac-logo sk" style="width:44px;height:44px;border-radius:12px">&nbsp;</div>
+        <div class="ac-body">
+          <div class="sk" style="width:60px;height:14px;margin-bottom:6px">&nbsp;</div>
+          <div class="sk" style="width:120px;height:10px">&nbsp;</div>
+        </div>
+        <div class="ac-right">
+          <div class="sk" style="width:65px;height:14px;margin-bottom:6px">&nbsp;</div>
+          <div class="sk" style="width:45px;height:10px">&nbsp;</div>
+        </div>
+      </div>
+    </div>`).join('');
 }
 
 function renderAlertCards(){
@@ -929,7 +1039,8 @@ function patchAlertCard(sym){
 }
 
 function openAlertModal(i){
-  const a=ALERTS[i], lp=LP[a.t], pos=lp?+lp.changePct>=0:true;
+  const a=ALERTS[i]; if(!a) return;
+  const lp=LP[a.t], pos=lp?+lp.changePct>=0:true;
   openModal(`
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
       <div style="width:48px;height:48px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;background:linear-gradient(135deg,${a.c}88,${a.c}44)">${a.logo}</div>
@@ -946,10 +1057,10 @@ function openAlertModal(i){
       <div class="port-stat" style="padding:10px 12px"><div class="ps-label">Day Low</div><div class="mono" style="font-size:12px">${fmtMoney(lp.low)}</div></div>
       <div class="port-stat" style="padding:10px 12px"><div class="ps-label">Volume</div><div class="mono" style="font-size:12px">${(lp.volume/1e6).toFixed(1)}M</div></div>
     </div>`:''}
-    <div style="margin-bottom:12px"><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Reasoning</div>
+    <div style="margin-bottom:12px"><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">AI Reasoning</div>
       <div style="font-size:13px;color:var(--muted2);line-height:1.6">${a.reason}</div>
     </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap">${a.strat.map(s=>`<span class="tag">${s}</span>`).join('')}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${(a.strat||[]).map(s=>`<span class="tag">${s}</span>`).join('')}</div>
   `);
 }
 
