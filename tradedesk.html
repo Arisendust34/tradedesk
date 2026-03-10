@@ -230,6 +230,38 @@ body{display:flex;flex-direction:column;position:fixed;width:100%;top:0;left:0}
 .limit-bar-fill{height:100%;border-radius:4px;transition:width .4s ease}
 .flex-b{display:flex;align-items:center;justify-content:space-between}
 .mono{font-family:var(--font-mono)}
+
+/* ── AI ANALYZER ── */
+.analyzer-wrap{background:linear-gradient(135deg,#0d1425 0%,#111d35 100%);border:1px solid rgba(99,130,255,.25);border-radius:18px;padding:16px;margin:0 16px 16px}
+.analyzer-title{font-size:11px;font-weight:800;letter-spacing:.8px;color:var(--muted2);text-transform:uppercase;margin-bottom:10px}
+.analyzer-input-row{display:flex;gap:8px;margin-bottom:10px}
+.analyzer-input-row input{flex:1;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:11px 14px;color:var(--text);font-family:var(--font-mono);font-size:13px;text-transform:uppercase;letter-spacing:.5px;outline:none}
+.analyzer-input-row input:focus{border-color:var(--accent2)}
+.analyzer-btn{padding:11px 18px;background:var(--accent2);border:none;border-radius:12px;color:#fff;font-family:var(--font-head);font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;transition:.15s}
+.analyzer-btn:active{opacity:.8;transform:scale(.97)}
+.analyzer-btn:disabled{opacity:.4;cursor:not-allowed}
+.analyzer-chips{display:flex;gap:6px;flex-wrap:wrap}
+.a-chip{padding:5px 11px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:700;color:var(--muted2);cursor:pointer;font-family:var(--font-mono);transition:.15s}
+.a-chip:active{background:var(--border2);color:var(--text)}
+
+/* result card */
+.ai-result-card{background:var(--card);border:1px solid var(--border2);border-radius:18px;padding:16px;margin:0 16px 16px;animation:fadeIn .3s ease}
+.ai-result-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.ai-result-logo{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0}
+.ai-result-name{flex:1}
+.ai-result-ticker{font-size:18px;font-weight:800;letter-spacing:.5px}
+.ai-result-price{font-size:12px;color:var(--muted2);margin-top:1px}
+.ai-rating-ring{text-align:center;flex-shrink:0}
+.ai-rating-num{font-size:26px;font-weight:900;line-height:1;font-family:var(--font-mono)}
+.ai-rating-label{font-size:9px;font-weight:700;letter-spacing:.5px;color:var(--muted);text-transform:uppercase}
+.ai-verdict{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:.3px;margin-bottom:10px}
+.ai-thesis{font-size:12px;color:var(--muted2);line-height:1.7;border-top:1px solid var(--border);padding-top:10px}
+.ai-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.ai-tag{padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;background:var(--card2);border:1px solid var(--border2);color:var(--muted2)}
+.ai-loading{display:flex;align-items:center;gap:10px;padding:24px 16px;color:var(--muted2);font-size:13px;margin:0 16px 16px;background:var(--card);border-radius:18px;border:1px solid var(--border2)}
+.ai-spinner{width:18px;height:18px;border:2px solid var(--border2);border-top-color:var(--accent2);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 </style>
 </head>
 <body>
@@ -262,6 +294,26 @@ body{display:flex;flex-direction:column;position:fixed;width:100%;top:0;left:0}
       </div>
     </div>
     <div id="alertBanner"></div>
+
+    <!-- AI STOCK ANALYZER -->
+    <div class="section-label">AI Stock Analyzer</div>
+    <div class="analyzer-wrap">
+      <div class="analyzer-title">⚡ Rate any stock 1–10</div>
+      <div class="analyzer-input-row">
+        <input id="analyzeInput" placeholder="TICKER…" maxlength="6" onkeydown="if(event.key==='Enter')analyzeStock()">
+        <button class="analyzer-btn" id="analyzeBtn" onclick="analyzeStock()">Analyze</button>
+      </div>
+      <div class="analyzer-chips">
+        <span class="a-chip" onclick="quickAnalyze('TSLA')">TSLA</span>
+        <span class="a-chip" onclick="quickAnalyze('PLTR')">PLTR</span>
+        <span class="a-chip" onclick="quickAnalyze('AMD')">AMD</span>
+        <span class="a-chip" onclick="quickAnalyze('COIN')">COIN</span>
+        <span class="a-chip" onclick="quickAnalyze('SHOP')">SHOP</span>
+        <span class="a-chip" onclick="quickAnalyze('META')">META</span>
+      </div>
+    </div>
+    <div id="analyzeResults"></div>
+
     <div class="section-label">Top Picks Today</div>
     <div id="alertCards"></div>
     <div class="card">
@@ -1267,6 +1319,123 @@ function saveFHKey2(){
   SC.clear('fh_');
   toast('Key 2 saved — now at 120 req/min 🚀');
   loadPortfolio(true); loadAlerts(true);
+}
+
+/* ════════════════════════════════════════════
+   AI STOCK ANALYZER — powered by Claude
+════════════════════════════════════════════ */
+const analyzeCache = {};
+
+function quickAnalyze(sym){
+  document.getElementById('analyzeInput').value = sym;
+  analyzeStock();
+}
+
+async function analyzeStock(){
+  const input = document.getElementById('analyzeInput');
+  const btn   = document.getElementById('analyzeBtn');
+  const out   = document.getElementById('analyzeResults');
+  const sym   = input.value.trim().toUpperCase();
+  if(!sym) return;
+
+  // Use cache to avoid repeated Claude calls
+  if(analyzeCache[sym]){
+    renderAnalysis(analyzeCache[sym]);
+    return;
+  }
+
+  // Show loading
+  btn.disabled = true;
+  btn.textContent = '…';
+  out.innerHTML = `<div class="ai-loading"><div class="ai-spinner"></div>Analyzing ${sym} with AI…</div>`;
+
+  // Get live price first if available
+  let priceStr = '';
+  try {
+    const q = await fhQuote(sym);
+    LP[sym] = q;
+    priceStr = `Current price: $${q.price.toFixed(2)}, ${q.changePct >= 0 ? '+' : ''}${q.changePct}% today.`;
+  } catch(e){ priceStr = 'Price unavailable.'; }
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: `You are a sharp stock analyst. When given a ticker, respond ONLY with a JSON object — no markdown, no backticks, no extra text. JSON format:
+{
+  "ticker": "NVDA",
+  "companyName": "NVIDIA Corporation",
+  "rating": 8,
+  "verdict": "Strong Buy",
+  "thesis": "2-3 sentence buy/avoid thesis. Be direct and specific about catalysts, risks, and timing.",
+  "tags": ["AI Exposure", "Momentum", "High Volatility"],
+  "type": "swing"
+}
+rating: 1-10 integer. verdict: one of "Strong Buy", "Buy", "Hold", "Avoid", "Strong Avoid". type: "swing", "longterm", or "both". tags: 2-4 short labels.`,
+        messages: [{
+          role: 'user',
+          content: `Analyze ${sym} as a stock trade or investment. ${priceStr} Give me a rating and thesis.`
+        }]
+      })
+    });
+
+    const data = await resp.json();
+    const raw  = data.content?.map(b => b.text||'').join('') || '';
+    const clean = raw.replace(/```json|```/g,'').trim();
+    const result = JSON.parse(clean);
+    result.price = LP[sym]?.price || null;
+    result.changePct = LP[sym]?.changePct || null;
+    analyzeCache[sym] = result;
+    renderAnalysis(result);
+  } catch(e){
+    out.innerHTML = `<div class="ai-result-card" style="border-color:rgba(240,90,90,.3)">
+      <div style="color:var(--red);font-weight:700;margin-bottom:6px">⚠ Analysis failed</div>
+      <div style="font-size:12px;color:var(--muted2)">${e.message}</div>
+    </div>`;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Analyze';
+  input.value = '';
+}
+
+function renderAnalysis(r){
+  const out = document.getElementById('analyzeResults');
+  const ratingColor = r.rating >= 8 ? 'var(--green)' : r.rating >= 6 ? 'var(--gold)' : r.rating >= 4 ? '#f97316' : 'var(--red)';
+  const verdictBg   = r.rating >= 8 ? 'rgba(34,211,160,.15)' : r.rating >= 6 ? 'rgba(247,185,64,.15)' : 'rgba(240,90,90,.15)';
+  const verdictCol  = r.rating >= 8 ? 'var(--green)' : r.rating >= 6 ? 'var(--gold)' : 'var(--red)';
+  const initials    = r.ticker.slice(0,2);
+  const logoColors  = ['#3b82f6','#22c55e','#f59e0b','#8b5cf6','#14b8a6','#f97316','#ef4444','#0ea5e9'];
+  let lh = 0; for(let i=0;i<r.ticker.length;i++) lh=(lh*31+r.ticker.charCodeAt(i))&0xff;
+  const logoBg = logoColors[lh % logoColors.length];
+  const priceLine = r.price
+    ? `<div class="ai-result-price">$${r.price.toFixed(2)} <span style="color:${+r.changePct>=0?'var(--green)':'var(--red)'}">${+r.changePct>=0?'+':''}${r.changePct}%</span></div>`
+    : '';
+  const typeLabel = r.type==='swing' ? '⚡ Swing' : r.type==='longterm' ? '📈 Long-Term' : '⚡📈 Swing + Long';
+
+  out.innerHTML = `<div class="ai-result-card">
+    <div class="ai-result-header">
+      <div class="ai-result-logo" style="background:${logoBg}">${initials}</div>
+      <div class="ai-result-name">
+        <div class="ai-result-ticker">${r.ticker}</div>
+        <div style="font-size:11px;color:var(--muted2);margin-top:1px">${r.companyName}</div>
+        ${priceLine}
+      </div>
+      <div class="ai-rating-ring">
+        <div class="ai-rating-num" style="color:${ratingColor}">${r.rating}<span style="font-size:13px;color:var(--muted)">/10</span></div>
+        <div class="ai-rating-label">Rating</div>
+      </div>
+    </div>
+    <div>
+      <span class="ai-verdict" style="background:${verdictBg};color:${verdictCol}">${r.verdict}</span>
+      <span class="ai-verdict" style="background:var(--card2);color:var(--muted2);margin-left:6px">${typeLabel}</span>
+    </div>
+    <div class="ai-thesis">${r.thesis}</div>
+    <div class="ai-tags">${(r.tags||[]).map(t=>`<span class="ai-tag">${t}</span>`).join('')}</div>
+  </div>`;
 }
 
 /* ════════════════════════════════════════════
