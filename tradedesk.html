@@ -273,7 +273,6 @@ body{display:flex;flex-direction:column;position:fixed;width:100%;top:0;left:0}
   </div>
   <div class="header-right">
     <div class="api-badge" id="fhKeyCount" onclick="openApiModal()" style="color:var(--green);border-color:rgba(34,211,160,.3)">FH ×1</div>
-    <div class="api-badge" id="apiBadge" onclick="openApiModal()">SMA 0/25</div>
     <div class="market-badge" id="mktBadge">CLOSED</div>
     <div class="time-display" id="clk">--:--</div>
   </div>
@@ -483,12 +482,8 @@ const Ctr = {
 };
 
 function refreshBadge() {
-  const keys=getFHKeys(), u=Ctr.get(), el=document.getElementById('apiBadge');
-  el.textContent=`SMA ${u}/${AV_LIMIT}`;
-  el.className='api-badge'+(u>=20?' danger':u>=15?' warn':'');
-  // Show key count indicator
-  const kc=document.getElementById('fhKeyCount');
-  if(kc) kc.textContent=`FH ×${keys.length}`;
+  const keys=getFHKeys(), el=document.getElementById('fhKeyCount');
+  if(el) el.textContent=`FH ×${keys.length}`;
 }
 
 /* ─── SESSION CACHE ──────────────────────────── */
@@ -566,28 +561,32 @@ async function batchFHQuotes(symbols) {
 }
 
 /* ─────────────────────────────────────────────────
-   ALPHA VANTAGE — SMA ONLY (rate-limited)
+   SMA via FINNHUB CANDLES — replaces Alpha Vantage
+   Fetches daily OHLCV, calculates SMA locally
+   No rate limit, all tickers load in parallel
 ───────────────────────────────────────────────── */
-function avCheck(j,field){
-  const note=j['Note']||j['Information']||j['Message']||'';
-  if(note.includes('Thank you')||note.includes('25 requests')||note.includes('rate limit')) throw new Error('LIMIT');
-  if(note.includes('premium')||note.includes('Premium')) throw new Error('PREMIUM');
-  if(!j[field]) throw new Error('NODATA');
-  return j[field];
-}
+async function getSMA(sym, period) {
+  const ck = `sma_${sym}_${period}`, cached = SC.get(ck);
+  if(cached !== null) return cached;
 
-async function getSMA(sym,period){
-  const ck=`sma_${sym}_${period}`, c=SC.get(ck);
-  if(c) return c;
-  if(Ctr.rem()<=0) throw new Error('LIMIT');
-  return AVQ.add(async()=>{
-    Ctr.inc();
-    const r=await fetch(`${AV_BASE}?function=SMA&symbol=${sym}&interval=daily&time_period=${period}&series_type=close&apikey=${AV_KEY}`);
-    const j=await r.json();
-    const ta=avCheck(j,'Technical Analysis: SMA');
-    const val=+ta[Object.keys(ta)[0]]['SMA'];
-    SC.set(ck,val); return val;
-  });
+  const key = getFHKey();
+  if(!key) throw new Error('NO_FH_KEY');
+
+  // Fetch enough candles: period + 50 buffer days to ensure we have enough trading days
+  const to   = Math.floor(Date.now() / 1000);
+  const from = to - (period + 80) * 24 * 60 * 60; // extra buffer for weekends/holidays
+
+  const r = await fetch(`${FH_BASE}/stock/candle?symbol=${sym}&resolution=D&from=${from}&to=${to}&token=${key}`);
+  if(!r.ok) throw new Error(`FH_CANDLE_${r.status}`);
+  const j = await r.json();
+
+  if(j.s !== 'ok' || !j.c || j.c.length < period) throw new Error('INSUFFICIENT_DATA');
+
+  // Take last `period` closing prices and average them
+  const closes = j.c.slice(-period);
+  const sma = closes.reduce((a, b) => a + b, 0) / closes.length;
+  SC.set(ck, sma);
+  return sma;
 }
 
 /* ─────────────────────────────────────────────────
@@ -1078,59 +1077,49 @@ async function initDip(){
 }
 
 async function fetchDipBatch(tickers, force=false){
-  const todo=tickers.filter(t=>{
-    if(force){ sessionStorage.removeItem(`td_sma_${t}_${SMA}`); return true; }
+  const todo = tickers.filter(t => {
+    if(force){ SC.clear(`sma_${t}_`); delete DIP_D[t]; return true; }
     return !DIP_D[t];
   });
   if(!todo.length){ renderDipChart(); return; }
-  setBanner('dipBanner','loading',`Loading prices for ${todo.length} tickers…`,null);
 
-  // Step 1: Batch fetch all prices via Finnhub (fast, parallel)
   if(!getFHKey()){
-    setBanner('dipBanner','error','Add your free Finnhub key to load prices',null,()=>showKeySetup(()=>fetchDipBatch(todo,true)));
-    return;
-  }
-  try {
-    const needPrice=todo.filter(t=>!LP[t]);
-    if(needPrice.length){
-      const batch=await batchFHQuotes(needPrice);
-      Object.assign(LP,batch);
-    }
-  } catch(e){
-    setBanner('dipBanner','error',`Price fetch failed: ${e.message}`,null,()=>{DIP_D={};fetchDipBatch(DIP_T,true);});
+    setBanner('dipBanner','error','Add your Finnhub key to load SMA data',null,()=>showKeySetup(()=>fetchDipBatch(todo,true)));
     return;
   }
 
-  // Step 2: Fetch SMA from Alpha Vantage (rate-limited, sequential)
-  setBanner('dipBanner','loading',`Prices loaded. Fetching SMA${SMA} data (rate-limited, ~12s/call)…`,null);
-  let done=0;
-  for(const t of todo){
-    const chip=document.querySelector(`.ticker-chip[data-t="${t}"]`);
-    if(chip) chip.classList.add('loading');
-    try{
-      const price=LP[t]?.price;
-      if(!price){ DIP_D[t]=null; continue; }
-      const sma=await getSMA(t,SMA);
-      const dev=(price-sma)/sma*100;
-      DIP_D[t]={price,sma,dev};
-      done++;
-    }catch(e){
-      if(e.message==='LIMIT'){
-        setBanner('dipBanner','error',`AV API limit hit (${Ctr.get()}/25). ${done} loaded. Resets midnight.`,null,()=>{DIP_D={};fetchDipBatch(DIP_T,true);}); break;
-      }
-      if(e.message==='PREMIUM'){
-        setBanner('dipBanner','error','SMA endpoint requires AV premium on this key.',null); break;
-      }
-      DIP_D[t]=null;
+  setBanner('dipBanner','loading',`Loading all ${todo.length} tickers in parallel…`,null);
+
+  // Fire ALL tickers simultaneously — prices + SMA candles at once
+  const results = await Promise.allSettled(todo.map(async t => {
+    // Get price (reuse from LP if already loaded)
+    let price = LP[t]?.price;
+    if(!price){
+      const q = await fhQuote(t);
+      LP[t] = q;
+      price = q.price;
     }
-    if(chip) chip.classList.remove('loading');
-    setBanner('dipBanner','loading',`SMA${SMA}… ${done}/${todo.length} complete`,null);
-    renderDipChart();
-  }
-  const ts=SC.ts(`sma_${tickers[0]}_${SMA}`);
-  const loaded=Object.values(DIP_D).filter(Boolean).length;
-  document.getElementById('dipTs').textContent=ts?'Updated '+fmtTime(ts):'--';
-  setBanner('dipBanner',loaded>0?'live':'error',`SMA${SMA} · ${loaded} tickers · prices via Yahoo Finance`,ts,()=>{DIP_D={};fetchDipBatch(DIP_T,true);});
+    const sma = await getSMA(t, SMA);
+    const dev = (price - sma) / sma * 100;
+    return { t, price, sma, dev };
+  }));
+
+  let loaded = 0;
+  results.forEach((r, i) => {
+    if(r.status === 'fulfilled'){
+      DIP_D[todo[i]] = r.value;
+      loaded++;
+    } else {
+      DIP_D[todo[i]] = null;
+    }
+  });
+
+  renderDipChart();
+  const ts = Date.now();
+  document.getElementById('dipTs').textContent = 'Updated ' + fmtTime(ts);
+  setBanner('dipBanner', loaded > 0 ? 'live' : 'error',
+    `SMA${SMA} · ${loaded}/${todo.length} tickers loaded · Finnhub`,
+    ts, () => { DIP_D = {}; fetchDipBatch(DIP_T, true); });
 }
 
 function renderDipChart(){
@@ -1160,14 +1149,17 @@ document.getElementById('smaTabs').addEventListener('click',async e=>{
   document.querySelectorAll('.sma-tab').forEach(t=>t.classList.remove('active'));
   e.target.classList.add('active');
   SMA=parseInt(e.target.dataset.sma);
-  // check cache coverage
-  const needFetch=DIP_T.some(t=>!SC.get(`sma_${t}_${SMA}`));
-  if(needFetch){ DIP_D={}; await fetchDipBatch(DIP_T); }
+  DIP_D={};
+  // Rebuild from cache where available, fetch missing
+  DIP_T.forEach(t=>{
+    const s=SC.get(`sma_${t}_${SMA}`), p=LP[t]?.price;
+    if(s&&p) DIP_D[t]={price:p,sma:s,dev:(p-s)/s*100};
+  });
+  const missing=DIP_T.filter(t=>!DIP_D[t]);
+  if(missing.length) await fetchDipBatch(missing);
   else{
-    DIP_T.forEach(t=>{ const s=SC.get(`sma_${t}_${SMA}`), p=LP[t]?.price; if(s&&p) DIP_D[t]={price:p,sma:s,dev:(p-s)/s*100}; });
     renderDipChart();
-    const ts=SC.ts(`sma_${DIP_T[0]}_${SMA}`);
-    setBanner('dipBanner','cached',`Cached SMA${SMA} data`,ts,()=>{DIP_D={};fetchDipBatch(DIP_T,true);});
+    setBanner('dipBanner','cached',`Cached SMA${SMA} data`,Date.now(),()=>{DIP_D={};fetchDipBatch(DIP_T,true);});
   }
 });
 
