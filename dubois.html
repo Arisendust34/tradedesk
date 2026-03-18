@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Code Your Player Card — Python Esports Lesson</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0c0e14; --bg2:#111420; --bg3:#161a26;
+  --border:#242840; --border2:#2e344f;
+  --accent:#f0c040; --accent2:#e05c3c;
+  --green:#4dff91; --cyan:#40d0f0; --purple:#a070ff;
+  --text:#c8d0e8; --dim:#5a6080; --code-bg:#0a0c12;
+  --blank-bg:rgba(240,192,64,0.13); --blank-border:#f0c040;
+  --blank-focus:rgba(240,192,64,0.25);
+  --err-bg:rgba(224,92,60,0.12); --err-border:#e05c3c;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.025) 2px,rgba(0,0,0,.025) 4px);pointer-events:none;z-index:9999;}
+
+/* HEADER */
+.hdr{padding:13px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--bg2);position:sticky;top:0;z-index:100;gap:12px;flex-wrap:wrap;}
+.hdr-l{display:flex;align-items:center;gap:11px;}
+.logo{width:38px;height:38px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;box-shadow:0 0 16px rgba(240,192,64,.35);}
+.hdr-title{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:2px;color:#fff;line-height:1;}
+.hdr-sub{font-size:.66rem;color:var(--dim);letter-spacing:2px;text-transform:uppercase;margin-top:1px;}
+.xp-w{display:flex;align-items:center;gap:9px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;}
+.xp-lbl{font-family:'Space Mono',monospace;font-size:.6rem;color:var(--accent);letter-spacing:1px;}
+.xp-bar{width:95px;height:5px;background:var(--border);border-radius:3px;overflow:hidden;}
+.xp-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;transition:width .8s cubic-bezier(.4,0,.2,1);box-shadow:0 0 6px var(--accent);width:0%;}
+.rank{font-family:'Space Mono',monospace;font-size:.58rem;padding:3px 7px;border-radius:4px;font-weight:700;letter-spacing:1px;white-space:nowrap;}
+
+/* STEP NAV */
+.snav{display:flex;overflow-x:auto;border-bottom:1px solid var(--border);background:var(--bg2);}
+.snav::-webkit-scrollbar{height:3px;}
+.snav::-webkit-scrollbar-thumb{background:var(--border2);}
+.sbtn{font-family:'Space Mono',monospace;font-size:.57rem;padding:10px 13px;background:none;border:none;border-bottom:2px solid transparent;color:var(--dim);cursor:pointer;transition:all .2s;white-space:nowrap;letter-spacing:1px;flex-shrink:0;}
+.sbtn:hover{color:var(--text);background:rgba(255,255,255,.02);}
+.sbtn.active{color:var(--accent);border-bottom-color:var(--accent);}
+.sbtn.done{color:var(--green);}
+
+/* MAIN */
+.main{display:grid;grid-template-columns:1fr 1fr;height:calc(100vh - 100px);}
+@media(max-width:860px){.main{grid-template-columns:1fr;height:auto;}}
+.left-col{display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden;}
+.right-col{display:flex;flex-direction:column;overflow:hidden;}
+
+/* CODE PANEL */
+.cpanel{flex:0 0 55%;display:flex;flex-direction:column;background:var(--code-bg);overflow:hidden;min-height:200px;}
+.ph{padding:9px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--bg3);flex-shrink:0;gap:8px;}
+.pt{font-family:'Space Mono',monospace;font-size:.62rem;color:var(--dim);letter-spacing:1px;display:flex;align-items:center;gap:5px;}
+.dot{width:8px;height:8px;border-radius:50%;}
+.dr{background:#ff5f57}.dy{background:#ffbd2e}.dg{background:#28ca41}
+.ph-btns{display:flex;gap:6px;align-items:center;}
+.hint-btn{font-family:'Space Mono',monospace;font-size:.58rem;padding:5px 10px;background:rgba(160,112,255,.12);border:1px solid rgba(160,112,255,.3);border-radius:4px;color:var(--purple);cursor:pointer;letter-spacing:1px;transition:all .2s;}
+.hint-btn:hover{background:rgba(160,112,255,.22);border-color:var(--purple);}
+.run-btn{font-family:'Space Mono',monospace;font-size:.62rem;padding:6px 14px;background:var(--green);border:none;border-radius:5px;color:#000;font-weight:700;cursor:pointer;letter-spacing:1px;transition:all .2s;}
+.run-btn:hover{background:#fff;box-shadow:0 0 12px rgba(77,255,145,.4);transform:translateY(-1px);}
+.run-btn:disabled{background:var(--border);color:var(--dim);cursor:not-allowed;transform:none;box-shadow:none;}
+
+/* CODE EDITOR — uses contenteditable divs */
+.code-wrap{flex:1;display:flex;overflow:hidden;}
+.line-nums{padding:12px 0;width:36px;background:var(--bg3);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;font-family:'Space Mono',monospace;font-size:.7rem;color:var(--dim);user-select:none;flex-shrink:0;overflow:hidden;}
+.lnum{line-height:1.6rem;width:100%;text-align:center;}
+.lnum.err-line{color:var(--accent2);background:rgba(224,92,60,.1);}
+
+/* The actual editable code area */
+.code-display{flex:1;overflow:auto;padding:12px 0;font-family:'Space Mono',monospace;font-size:.74rem;line-height:1.6rem;background:transparent;outline:none;}
+.code-display::-webkit-scrollbar{width:4px;height:4px;}
+.code-display::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+
+.code-line{display:flex;align-items:baseline;padding:0 12px;min-height:1.6rem;white-space:pre;}
+.code-line.err-hl{background:var(--err-bg);}
+.code-line.ok-hl{background:rgba(77,255,145,.06);}
+
+/* Static code text */
+.ct{color:var(--text);}
+.ck{color:#81a2c8;} /* keyword */
+.cf{color:var(--cyan);} /* function */
+.cs{color:#98c379;} /* string */
+.cc{color:var(--dim);font-style:italic;} /* comment */
+.cn{color:#e5c07b;} /* number */
+
+/* BLANK INPUT */
+.blank{
+  display:inline-block;
+  background:var(--blank-bg);
+  border:1px solid var(--blank-border);
+  border-radius:4px;
+  padding:0 4px;
+  min-width:60px;
+  height:1.35rem;
+  line-height:1.35rem;
+  font-family:'Space Mono',monospace;
+  font-size:.74rem;
+  color:#fff;
+  outline:none;
+  vertical-align:baseline;
+  transition:background .15s,border-color .15s,box-shadow .15s;
+  caret-color:var(--accent);
+}
+.blank:focus{background:var(--blank-focus);border-color:var(--accent);box-shadow:0 0 0 2px rgba(240,192,64,.18);}
+.blank.correct{background:rgba(77,255,145,.12);border-color:var(--green);color:var(--green);}
+.blank.wrong{background:var(--err-bg);border-color:var(--accent2);animation:shake .3s ease;}
+.blank::placeholder{color:rgba(240,192,64,.4);}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+/* HINT POPUP */
+.hint-box{display:none;background:rgba(160,112,255,.1);border:1px solid rgba(160,112,255,.35);border-radius:8px;padding:11px 14px;margin:0 0 0 0;font-size:.83rem;color:var(--text);line-height:1.6;flex-shrink:0;}
+.hint-box.show{display:block;}
+.hint-title{font-family:'Space Mono',monospace;font-size:.58rem;color:var(--purple);letter-spacing:2px;margin-bottom:5px;}
+
+/* ERROR BOX */
+.err-box{display:none;background:var(--err-bg);border:1px solid var(--err-border);border-left:3px solid var(--accent2);border-radius:8px;padding:11px 14px;font-family:'Space Mono',monospace;font-size:.72rem;color:var(--accent2);line-height:1.6;flex-shrink:0;}
+.err-box.show{display:block;animation:slideIn .2s ease;}
+@keyframes slideIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.err-title{font-size:.6rem;letter-spacing:2px;margin-bottom:4px;color:var(--accent2);}
+.err-msg{color:var(--text);}
+.err-hint{color:var(--dim);margin-top:4px;font-size:.68rem;}
+
+/* PROGRESS BAR */
+.progress-row{display:flex;align-items:center;gap:8px;padding:6px 13px;border-top:1px solid var(--border);background:var(--bg3);flex-shrink:0;}
+.prog-label{font-family:'Space Mono',monospace;font-size:.58rem;color:var(--dim);letter-spacing:1px;white-space:nowrap;}
+.prog-bar{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:2px;transition:width .4s ease;}
+.prog-pct{font-family:'Space Mono',monospace;font-size:.58rem;color:var(--accent);white-space:nowrap;}
+
+/* TERMINAL */
+.tpanel{flex:0 0 45%;display:flex;flex-direction:column;background:#070910;border-top:1px solid var(--border);overflow:hidden;min-height:150px;}
+.th{padding:8px 13px;border-bottom:1px solid var(--border);background:var(--bg3);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.tt{font-family:'Space Mono',monospace;font-size:.62rem;color:var(--dim);letter-spacing:1px;display:flex;align-items:center;gap:6px;}
+.sdot{width:6px;height:6px;border-radius:50%;background:var(--border2);transition:background .3s;}
+.sdot.on{background:var(--green);box-shadow:0 0 5px var(--green);animation:bl 1s infinite;}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:.3}}
+.clr-btn{font-family:'Space Mono',monospace;font-size:.57rem;background:none;border:1px solid var(--border2);color:var(--dim);padding:3px 8px;border-radius:4px;cursor:pointer;transition:all .2s;}
+.clr-btn:hover{border-color:var(--accent2);color:var(--accent2);}
+.tout{flex:1;overflow-y:auto;padding:10px 13px;font-family:'Space Mono',monospace;font-size:.73rem;line-height:1.85;}
+.tout::-webkit-scrollbar{width:4px;}
+.tout::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+.tl{animation:tla .1s ease forwards;opacity:0;}
+@keyframes tla{to{opacity:1;}}
+.tp{color:var(--green)}.to{color:var(--text)}.ta{color:var(--cyan)}.tv{color:#fff;font-weight:700}
+.tc{color:var(--accent)}.tf{color:#ff6b35}.tcl{color:var(--green)}.thl{color:var(--cyan)}.tgr{color:var(--purple)}.te{color:var(--accent2)}.ti{color:var(--dim)}.td{color:var(--border2)}
+
+/* TERMINAL INPUT ROW */
+.tinrow{display:none;align-items:center;border-top:1px solid var(--border);background:#070910;flex-shrink:0;}
+.tinlbl{font-family:'Space Mono',monospace;font-size:.73rem;color:var(--cyan);padding:9px 0 9px 13px;white-space:nowrap;flex-shrink:0;}
+.tinput{flex:1;background:transparent;border:none;outline:none;font-family:'Space Mono',monospace;font-size:.73rem;color:#fff;padding:9px 9px;caret-color:var(--accent);}
+.tinput::placeholder{color:var(--dim);}
+.tinput:disabled{cursor:not-allowed;}
+.tsub{font-family:'Space Mono',monospace;font-size:.58rem;background:var(--accent);border:none;color:#000;font-weight:700;padding:9px 13px;cursor:pointer;letter-spacing:1px;transition:all .2s;flex-shrink:0;}
+.tsub:hover{background:#fff;}
+.tsub:disabled{background:var(--border);color:var(--dim);cursor:not-allowed;}
+
+/* RIGHT PANEL */
+.rtabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;}
+.rtb{font-family:'Space Mono',monospace;font-size:.57rem;padding:10px 12px;background:none;border:none;border-bottom:2px solid transparent;color:var(--dim);cursor:pointer;transition:all .2s;letter-spacing:1px;white-space:nowrap;}
+.rtb:hover{color:var(--text);}
+.rtb.active{color:var(--accent);border-bottom-color:var(--accent);}
+.rbody{flex:1;overflow-y:auto;}
+.rbody::-webkit-scrollbar{width:4px;}
+.rbody::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+
+/* LESSON STEPS */
+.ls{display:none;padding:17px;}
+.ls.active{display:block;animation:fu .25s ease;}
+@keyframes fu{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+.stag{font-family:'Space Mono',monospace;font-size:.57rem;color:var(--accent);letter-spacing:3px;text-transform:uppercase;margin-bottom:5px;}
+.stitle{font-family:'Bebas Neue',sans-serif;font-size:1.75rem;letter-spacing:2px;color:#fff;line-height:1;margin-bottom:9px;}
+.sdesc{font-size:.86rem;color:var(--dim);line-height:1.7;margin-bottom:13px;}
+.cbox{background:var(--bg3);border:1px solid var(--border);border-left:3px solid var(--cyan);border-radius:8px;padding:12px;margin-bottom:11px;}
+.cbox-lbl{font-family:'Space Mono',monospace;font-size:.57rem;color:var(--cyan);letter-spacing:2px;margin-bottom:5px;}
+.cbox-name{font-size:.88rem;font-weight:700;color:#fff;margin-bottom:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.stag2{font-family:'Space Mono',monospace;font-size:.57rem;background:rgba(160,112,255,.12);color:var(--purple);border:1px solid rgba(160,112,255,.35);padding:2px 6px;border-radius:20px;}
+.cbody{font-size:.83rem;color:var(--dim);line-height:1.65;}
+code{font-family:'Space Mono',monospace;font-size:.78em;background:rgba(240,192,64,.1);color:var(--accent);padding:1px 4px;border-radius:3px;}
+.tbox{background:linear-gradient(135deg,rgba(77,255,145,.04),rgba(64,208,240,.04));border:1px solid rgba(77,255,145,.17);border-radius:8px;padding:12px;margin-bottom:11px;}
+.tlbl{font-family:'Space Mono',monospace;font-size:.57rem;color:var(--green);letter-spacing:2px;margin-bottom:6px;}
+.tlist{list-style:none;display:flex;flex-direction:column;gap:5px;}
+.titem{display:flex;gap:7px;align-items:flex-start;font-size:.83rem;color:var(--text);}
+.titem::before{content:'→';color:var(--green);flex-shrink:0;font-family:monospace;}
+.wbox{background:rgba(224,92,60,.06);border:1px solid rgba(224,92,60,.2);border-left:3px solid var(--accent2);border-radius:8px;padding:12px;margin-bottom:11px;}
+.wlbl{font-family:'Space Mono',monospace;font-size:.57rem;color:var(--accent2);letter-spacing:2px;margin-bottom:4px;}
+.wbody{font-size:.83rem;color:var(--dim);line-height:1.65;}
+
+/* COMP BANNER */
+.compb{display:none;background:linear-gradient(135deg,rgba(77,255,145,.07),rgba(240,192,64,.05));border:1px solid rgba(77,255,145,.25);border-radius:10px;padding:15px;text-align:center;margin-top:13px;}
+.compb.show{display:block;animation:fu .4s ease;}
+.compicon{font-size:1.9rem;margin-bottom:5px;}
+.comptitle{font-family:'Bebas Neue',sans-serif;font-size:1.65rem;letter-spacing:3px;color:var(--green);}
+.compsub{font-size:.81rem;color:var(--dim);margin-top:3px;}
+
+/* LESSON NAV */
+.lnav{padding:10px 17px;border-top:1px solid var(--border);display:flex;gap:7px;justify-content:space-between;background:var(--bg2);flex-shrink:0;}
+.nb{font-family:'Space Mono',monospace;font-size:.6rem;padding:8px 15px;border-radius:5px;cursor:pointer;letter-spacing:1px;transition:all .2s;font-weight:700;}
+.np{background:transparent;border:1px solid var(--border2);color:var(--dim);}
+.np:hover{border-color:var(--text);color:var(--text);}
+.nn{background:var(--accent);border:1px solid var(--accent);color:#000;}
+.nn:hover{background:#fff;box-shadow:0 0 12px rgba(240,192,64,.35);transform:translateY(-1px);}
+.nn:disabled{background:var(--border);border-color:var(--border);color:var(--dim);cursor:default;transform:none;box-shadow:none;}
+
+/* GLOSSARY & BONUS */
+.gpane{display:none;padding:13px;}
+.gpane.active{display:block;}
+.gi{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;display:flex;gap:10px;}
+.gn{font-family:'Bebas Neue',sans-serif;font-size:1.25rem;color:var(--border2);line-height:1;flex-shrink:0;width:21px;}
+.gnm{font-family:'Space Mono',monospace;font-size:.73rem;color:var(--accent);margin-bottom:3px;}
+.gd{font-size:.82rem;color:var(--dim);line-height:1.6;}
+.gs{display:inline-block;font-size:.63rem;background:rgba(160,112,255,.1);color:var(--purple);border:1px solid rgba(160,112,255,.3);padding:2px 6px;border-radius:4px;margin-top:3px;font-family:'Space Mono',monospace;}
+.bpane{display:none;padding:13px;}
+.bpane.active{display:block;}
+.bc{background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:14px;margin-bottom:8px;border-left:3px solid;}
+.be{border-left-color:var(--green)}.bm{border-left-color:var(--cyan)}.bh{border-left-color:var(--accent2)}
+.bd{font-family:'Space Mono',monospace;font-size:.57rem;letter-spacing:2px;margin-bottom:4px;}
+.be .bd{color:var(--green)}.bm .bd{color:var(--cyan)}.bh .bd{color:var(--accent2)}
+.bt{font-size:.88rem;font-weight:700;color:#fff;margin-bottom:3px;}
+.bb{font-size:.81rem;color:var(--dim);line-height:1.6;}
+
+/* NOTIF */
+.notif{position:fixed;bottom:16px;right:16px;background:var(--bg3);border:1px solid var(--border2);border-left:3px solid var(--green);border-radius:8px;padding:10px 15px;font-family:'Space Mono',monospace;font-size:.67rem;color:var(--green);z-index:9998;transform:translateX(130%);transition:transform .3s cubic-bezier(.4,0,.2,1);max-width:220px;box-shadow:0 8px 26px rgba(0,0,0,.5);}
+.notif.show{transform:translateX(0);}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-l">
+    <div class="logo">🎮</div>
+    <div>
+      <div class="hdr-title">CODE YOUR PLAYER CARD</div>
+      <div class="hdr-sub">Python Esports Lesson · Grades 5–8</div>
+    </div>
+  </div>
+  <div class="xp-w">
+    <div>
+      <div class="xp-lbl">CODER XP</div>
+      <div class="xp-bar"><div class="xp-fill" id="xpFill"></div></div>
+    </div>
+    <div class="rank" id="rankPill" style="background:rgba(77,255,145,.12);color:#4dff91;border:1px solid #4dff91">NEWBIE</div>
+  </div>
+</header>
+
+<div class="snav" id="stepNav">
+  <button class="sbtn active" onclick="goStep(0,this)">00 · INTRO</button>
+  <button class="sbtn" onclick="goStep(1,this)">01 · print()</button>
+  <button class="sbtn" onclick="goStep(2,this)">02 · input()</button>
+  <button class="sbtn" onclick="goStep(3,this)">03 · VARIABLES</button>
+  <button class="sbtn" onclick="goStep(4,this)">04 · int()</button>
+  <button class="sbtn" onclick="goStep(5,this)">05 · if/else</button>
+  <button class="sbtn" onclick="goStep(6,this)">06 · FINAL BUILD</button>
+</div>
+
+<div class="main">
+
+  <!-- LEFT -->
+  <div class="left-col">
+
+    <!-- CODE PANEL -->
+    <div class="cpanel">
+      <div class="ph">
+        <div class="pt">
+          <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+          <span style="margin-left:4px">player_card.py</span>
+        </div>
+        <div class="ph-btns">
+          <button class="hint-btn" onclick="showHint()">💡 HINT</button>
+          <button class="run-btn" id="runBtn" onclick="runCode()">▶ RUN</button>
+        </div>
+      </div>
+
+      <!-- hint / error boxes -->
+      <div class="hint-box" id="hintBox" style="margin:8px 12px 0;"><div class="hint-title">💡 HINT</div><div id="hintMsg"></div></div>
+      <div class="err-box" id="errBox" style="margin:8px 12px 0;"><div class="err-title">⚠ FIX THIS FIRST</div><div class="err-msg" id="errMsg"></div><div class="err-hint" id="errHint"></div></div>
+
+      <!-- editable code with blanks -->
+      <div class="code-wrap">
+        <div class="line-nums" id="lineNums"></div>
+        <div class="code-display" id="codeDisplay"></div>
+      </div>
+
+      <!-- progress bar for blanks filled -->
+      <div class="progress-row">
+        <div class="prog-label">BLANKS FILLED</div>
+        <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+        <div class="prog-pct" id="progPct">0 / 0</div>
+      </div>
+    </div>
+
+    <!-- TERMINAL -->
+    <div class="tpanel">
+      <div class="th">
+        <div class="tt"><div class="sdot" id="sdot"></div>TERMINAL — LIVE INPUT</div>
+        <button class="clr-btn" onclick="clearTerm()">✕ CLEAR</button>
+      </div>
+      <div class="tout" id="tout"></div>
+      <div class="tinrow" id="tinrow">
+        <div class="tinlbl">▶</div>
+        <input class="tinput" id="tinput" placeholder="Type your answer and press ENTER..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+        <button class="tsub" id="tsub" onclick="submitInput()">ENTER</button>
+      </div>
+    </div>
+
+  </div><!-- /left-col -->
+
+  <!-- RIGHT -->
+  <div class="right-col">
+    <div class="rtabs">
+      <button class="rtb active" onclick="switchTab('lesson',this)">📖 LESSON</button>
+      <button class="rtb" onclick="switchTab('glossary',this)">📚 GLOSSARY</button>
+      <button class="rtb" onclick="switchTab('bonus',this)">⚡ BONUS</button>
+    </div>
+    <div class="rbody">
+
+      <div id="lessonPane">
+        <!-- Step 0 -->
+        <div class="ls active" id="ls-0">
+          <div class="stag">STEP 00 · WELCOME</div>
+          <div class="stitle">WELCOME, CODER</div>
+          <div class="sdesc">You know Scratch — now you're writing <strong style="color:#fff">real Python</strong>. Today you'll build a <strong style="color:var(--accent)">Player Card Generator</strong> that asks for your gamer info and prints a custom status like <span style="color:#ff6b35">PRO PLAYER MATERIAL 🔥</span></div>
+          <div class="cbox" style="border-left-color:var(--green)">
+            <div class="cbox-lbl" style="color:var(--green)">HOW THIS WORKS</div>
+            <div class="cbody">
+              <strong style="color:#fff">1. Fill in the blanks</strong> — the yellow <code>___</code> boxes in the code are yours to complete.<br><br>
+              <strong style="color:#fff">2. Click ▶ RUN</strong> — your code gets checked, then the program runs in the terminal.<br><br>
+              <strong style="color:#fff">3. Type your answers</strong> — when the terminal asks a question, type your real answer and hit ENTER!
+            </div>
+          </div>
+          <div class="tbox">
+            <div class="tlbl">TODAY'S SKILLS</div>
+            <ul class="tlist">
+              <li class="titem"><code>print()</code> — display text on screen</li>
+              <li class="titem"><code>input()</code> — ask the user a question</li>
+              <li class="titem">Variables — store information</li>
+              <li class="titem"><code>int()</code> — turn text into numbers</li>
+              <li class="titem"><code>if / elif / else</code> — make decisions</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Step 1 -->
+        <div class="ls" id="ls-1">
+          <div class="stag">STEP 01 · FIRST SKILL</div>
+          <div class="stitle">print()</div>
+          <div class="sdesc"><code>print()</code> shows text in the terminal — exactly like the <span style="color:var(--purple)">Say block</span> in Scratch, but writes to the screen.</div>
+          <div class="cbox">
+            <div class="cbox-lbl">HOW IT WORKS</div>
+            <div class="cbox-name"><code>print("Hello!")</code> <span class="stag2">= Scratch "Say" block</span></div>
+            <div class="cbody">Text in quotes → appears in the terminal.<br><code>print("Hi,", "Player!")</code> → <code>Hi, Player!</code></div>
+          </div>
+          <div class="tbox">
+            <div class="tlbl">YOUR TASK</div>
+            <ul class="tlist">
+              <li class="titem">Fill in the <strong style="color:var(--accent)">yellow blanks</strong> with the right text or function names</li>
+              <li class="titem">Click ▶ RUN to see your output in the terminal</li>
+              <li class="titem">💡 Use the HINT button if you get stuck!</li>
+            </ul>
+          </div>
+          <div class="wbox">
+            <div class="wlbl">⚠ COMMON MISTAKE</div>
+            <div class="wbody"><code>print(Hello)</code> = error. Always wrap text in quotes: <code>print("Hello")</code></div>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="ls" id="ls-2">
+          <div class="stag">STEP 02 · ASK THE USER</div>
+          <div class="stitle">input()</div>
+          <div class="sdesc"><code>input()</code> pauses the program and waits for you to type. It's Scratch's <span style="color:var(--purple)">Ask and Wait</span> block — save the answer in a variable!</div>
+          <div class="cbox">
+            <div class="cbox-lbl">HOW IT WORKS</div>
+            <div class="cbox-name"><code>name = input("Gamer tag? ")</code> <span class="stag2">= "Ask and Wait"</span></div>
+            <div class="cbody">The text in quotes is the question shown. The answer is saved in <code>name</code>. Then: <code>print("Welcome,", name)</code></div>
+          </div>
+          <div class="cbox" style="border-left-color:var(--green)">
+            <div class="cbox-lbl" style="color:var(--green)">💡 LIVE TERMINAL</div>
+            <div class="cbody">Fill the blanks → click ▶ RUN → then <strong style="color:#fff">type YOUR answers</strong> in the terminal box below the code!</div>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="ls" id="ls-3">
+          <div class="stag">STEP 03 · STORE INFO</div>
+          <div class="stitle">VARIABLES</div>
+          <div class="sdesc">Variables are storage boxes — same as <span style="color:var(--purple)">Scratch Variables</span>. Name them, assign with <code>=</code>, use them anywhere in your code.</div>
+          <div class="cbox">
+            <div class="cbox-lbl">RULES</div>
+            <div class="cbody"><code>gamer_tag = "Faker"</code> — stores text<br><code>wins = 42</code> — stores a number<br><br><strong style="color:#fff">No spaces</strong> in names. Use underscores. <strong style="color:#fff">Case-sensitive.</strong></div>
+          </div>
+          <div class="tbox">
+            <div class="tlbl">YOUR TASK</div>
+            <ul class="tlist">
+              <li class="titem">Fill all 4 blank variable names in the code</li>
+              <li class="titem">Run it and enter YOUR real gamer info in the terminal</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="ls" id="ls-4">
+          <div class="stag">STEP 04 · MATH TIME</div>
+          <div class="stitle">int()</div>
+          <div class="sdesc"><code>input()</code> always gives you <strong style="color:#fff">text</strong>. To do math, wrap it in <code>int()</code> to convert it to a real number.</div>
+          <div class="cbox">
+            <div class="cbox-lbl">HOW IT WORKS</div>
+            <div class="cbody"><code>wins = int(input("Wins: "))</code><br>Converts text "42" → number <strong style="color:#fff">42</strong>. Then: <code>win_rate = wins / total * 100</code></div>
+          </div>
+          <div class="wbox">
+            <div class="wlbl">⚠ WITHOUT int()</div>
+            <div class="wbody">"5" + "3" = "53" — Python glues text together instead of adding. <code>int()</code> fixes this.</div>
+          </div>
+        </div>
+
+        <!-- Step 5 -->
+        <div class="ls" id="ls-5">
+          <div class="stag">STEP 05 · DECISIONS</div>
+          <div class="stitle">if / elif / else</div>
+          <div class="sdesc">Python checks conditions and runs different code — just like <span style="color:var(--purple)">Scratch's if/then/else</span>. Based on YOUR win rate, you get a different player status!</div>
+          <div class="cbox">
+            <div class="cbox-lbl">STRUCTURE</div>
+            <div class="cbody"><code>if</code> — checks first condition<br><code>elif</code> — checks if first was false<br><code>else</code> — runs if none matched<br><br><strong style="color:#fff">⚠ Indentation:</strong> 4 spaces inside each block!</div>
+          </div>
+          <div class="tbox">
+            <div class="tlbl">YOUR TASK</div>
+            <ul class="tlist">
+              <li class="titem">Fill in the comparison operators (<code>>=</code>) and values</li>
+              <li class="titem">Run twice — once with high wins, once with low wins</li>
+              <li class="titem">Watch the status change based on YOUR numbers!</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Step 6 -->
+        <div class="ls" id="ls-6">
+          <div class="stag">STEP 06 · ALL SKILLS COMBINED</div>
+          <div class="stitle">THE FINAL BUILD</div>
+          <div class="sdesc">All five skills together. Fill in every blank, run it, answer the questions in the terminal, and get YOUR custom player card!</div>
+          <div class="cbox" style="border-left-color:var(--green)">
+            <div class="cbox-lbl" style="color:var(--green)">THIS PROGRAM USES</div>
+            <div class="cbody">
+              ✓ <code>print()</code> — displays the card<br>
+              ✓ <code>input()</code> — collects YOUR info<br>
+              ✓ Variables — stores tag, game, wins, losses<br>
+              ✓ <code>int()</code> — converts wins/losses for math<br>
+              ✓ <code>if/elif/else</code> — assigns YOUR status
+            </div>
+          </div>
+          <div class="tbox">
+            <div class="tlbl">BONUS CHALLENGES</div>
+            <ul class="tlist">
+              <li class="titem">Add a 5th <code>elif</code> for exactly 50% win rate</li>
+              <li class="titem">Add an extra input for favorite map or weapon</li>
+              <li class="titem">Change the card border design using print()</li>
+            </ul>
+          </div>
+          <div class="compb" id="compBanner">
+            <div class="compicon">🏆</div>
+            <div class="comptitle">LESSON COMPLETE!</div>
+            <div class="compsub">You wrote and ran a real Python program with YOUR data. Go make it your own!</div>
+          </div>
+        </div>
+      </div><!-- /lessonPane -->
+
+      <!-- GLOSSARY -->
+      <div class="gpane" id="glossaryPane">
+        <div style="padding-top:12px">
+          <div class="gi"><div class="gn">01</div><div><div class="gnm">print()</div><div class="gd">Shows text in the terminal. Text must be in "quotes".</div><div class="gs">Scratch: "Say" block</div></div></div>
+          <div class="gi"><div class="gn">02</div><div><div class="gnm">input()</div><div class="gd">Pauses program, shows a question, waits for the user to type. Returns text.</div><div class="gs">Scratch: "Ask and Wait"</div></div></div>
+          <div class="gi"><div class="gn">03</div><div><div class="gnm">Variable</div><div class="gd">Named box storing a value. Created with <code>=</code>. No spaces in names.</div><div class="gs">Scratch: Variables panel</div></div></div>
+          <div class="gi"><div class="gn">04</div><div><div class="gnm">int()</div><div class="gd">Converts text to a whole number for math. Wrap around input(): <code>int(input("..."))</code></div><div class="gs">Scratch: No equivalent!</div></div></div>
+          <div class="gi"><div class="gn">05</div><div><div class="gnm">if / elif / else</div><div class="gd">Checks conditions, runs different code for each. Needs 4-space indentation inside.</div><div class="gs">Scratch: if/then/else blocks</div></div></div>
+          <div class="gi"><div class="gn">06</div><div><div class="gnm">String</div><div class="gd">Text data in Python, always in "quotes" or 'quotes'. Can't do math on strings.</div><div class="gs">Scratch: Text in blocks</div></div></div>
+          <div class="gi"><div class="gn">07</div><div><div class="gnm">Integer</div><div class="gd">A whole number (42, 0, -5). Math works on integers.</div><div class="gs">Scratch: Number variables</div></div></div>
+          <div class="gi"><div class="gn">08</div><div><div class="gnm">Indentation</div><div class="gd">4 spaces before code inside if/elif/else. Wrong indentation = error.</div><div class="gs">Scratch: Blocks snap inside blocks</div></div></div>
+        </div>
+      </div>
+
+      <!-- BONUS -->
+      <div class="bpane" id="bonusPane">
+        <div style="padding-top:12px">
+          <div class="stag" style="margin-bottom:6px">FOR FAST FINISHERS</div>
+          <div class="stitle" style="margin-bottom:11px">BONUS CHALLENGES</div>
+          <div class="bc be"><div class="bd">⭐ EASY</div><div class="bt">Add a Favorite Map</div><div class="bb">Add a new <code>input()</code> for favorite map or weapon and print it on the card.</div></div>
+          <div class="bc be"><div class="bd">⭐ EASY</div><div class="bt">Calculate KDA</div><div class="bb">Ask for kills, deaths, assists. Use <code>kda = (kills + assists) / deaths</code>.</div></div>
+          <div class="bc bm"><div class="bd">⭐⭐ MEDIUM</div><div class="bt">5th Status Tier</div><div class="bb">Add <code>elif win_rate == 50</code> with a "BALANCED ⚖️" status.</div></div>
+          <div class="bc bm"><div class="bd">⭐⭐ MEDIUM</div><div class="bt">Loop It</div><div class="bb">Wrap in <code>while True:</code>. Ask "Generate another? (yes/no)" and <code>break</code> to exit.</div></div>
+          <div class="bc bh"><div class="bd">⭐⭐⭐ HARD</div><div class="bt">Compare Two Players</div><div class="bb">Collect info for two players. Compare win rates and print the winner.</div></div>
+        </div>
+      </div>
+
+    </div><!-- /rbody -->
+    <div class="lnav">
+      <button class="nb np" id="prevBtn" onclick="prevStep()" disabled>← PREV</button>
+      <button class="nb nn" id="nextBtn" onclick="nextStep()">NEXT →</button>
+    </div>
+  </div><!-- /right-col -->
+
+</div><!-- /main -->
+<div class="notif" id="notif"></div>
+
+<script>
+// ─────────────────────────────────────────────
+// STEP DEFINITIONS
+// Each step has: lines[] of code segments + blanks,
+// a hint, and the program to execute when code is correct
+// ─────────────────────────────────────────────
+
+const STEPS = [
+// 0: INTRO
+{
+  hint: "Click ▶ RUN to run this intro — no blanks to fill yet!",
+  lines: [
+    [{t:'cc', v:'# 🎮 PLAYER CARD GENERATOR'}],
+    [{t:'cc', v:'# Fill the yellow blanks, then click ▶ RUN'}],
+    [{t:'cc', v:'# Type YOUR answers in the terminal below!'}],
+    [{t:'cc', v:''}],
+    [{t:'cf', v:'print'},{t:'ct', v:'('},{t:'cs', v:'"=================================="'},{t:'ct', v:')'}],
+    [{t:'cf', v:'print'},{t:'ct', v:'('},{t:'cs', v:'"  ESPORTS PLAYER CARD GENERATOR  "'},{t:'ct', v:')'}],
+    [{t:'cf', v:'print'},{t:'ct', v:'('},{t:'cs', v:'"=================================="'},{t:'ct', v:')'}],
+    [{t:'cf', v:'print'},{t:'ct', v:'()'}],
+    [{t:'cf', v:'print'},{t:'ct', v:'('},{t:'cs', v:'"Terminal is live — type YOUR answers!"'},{t:'ct', v:')'}],
+  ],
+  blanks: [],
+  program: [
+    {t:'print',v:'=================================='},
+    {t:'print',v:'  ESPORTS PLAYER CARD GENERATOR  '},
+    {t:'print',v:'=================================='},
+    {t:'print',v:''},
+    {t:'print',v:'Terminal is live — type YOUR answers!'},
+  ]
+},
+// 1: print()
+{
+  hint: "The first 3 blanks all need the same function name that SHOWS text — it starts with 'p'. The last blank is text inside print() — type anything in quotes, like \"READY TO CODE\" or \"LET'S GO!\"",
+  lines: [
+    [{t:'cc', v:'# STEP 1: print()'}],
+    [{t:'cc', v:'# Fill the blanks with the right function name or text'}],
+    [{t:'cc', v:''}],
+    [{t:'blank', id:'b0', placeholder:'???', answer:'print', width:'55px'},
+     {t:'ct', v:'('},{t:'cs', v:'"=================================="'},{t:'ct', v:')'}],
+    [{t:'blank', id:'b1', placeholder:'???', answer:'print', width:'55px'},
+     {t:'ct', v:'('},{t:'cs', v:'"   ESPORTS PLAYER CARD GENERATOR  "'},{t:'ct', v:')'}],
+    [{t:'blank', id:'b2', placeholder:'???', answer:'print', width:'55px'},
+     {t:'ct', v:'('},{t:'cs', v:'"=================================="'},{t:'ct', v:')'}],
+    [{t:'cf', v:'print'},{t:'ct', v:'()'}],
+    [{t:'cf', v:'print'},{t:'ct', v:'('},{t:'cs', v:'"Loading player data..."'},{t:'ct', v:')'}],
+    [{t:'cf', v:'print'},{t:'ct', v:'('},{t:'blank', id:'b3', placeholder:'???', answer:'"READY TO CODE"', width:'130px'},{t:'ct', v:')'}],
+  ],
+  blanks: ['b0','b1','b2','b3'],
+  blankAnswers: {b0:'print', b1:'print', b2:'print', b3:'__quoted__'},
+  program: [
+    {t:'print',v:'=================================='},
+    {t:'print',v:'   ESPORTS PLAYER CARD GENERATOR  '},
+    {t:'print',v:'=================================='},
+    {t:'print',v:''},
+    {t:'print',v:'Loading player data...'},
+    {t:'print',v:'READY TO CODE'},
+  ]
+},
+// 2: input()
+{
+  hint: "The function blanks need  input  (no quotes). The variable name blanks can be anything valid — like gamer_tag, myName, player1. Just make sure you use the SAME name in both the input() line and the print() line!",
+  lines: [
+    [{t:'cc', v:'# STEP 2: input() — the terminal will ask you questions!'}],
+    [{t:'cc', v:''}],
+    [{t:'cf', v:'print'},{t:'ct', v:'('},{t:'cs', v:'"=== PLAYER REGISTRATION ==="'},{t:'ct', v:')'}],
+    [{t:'cf', v:'print'},{t:'ct', v:'()'}],
+    [{t:'cc', v:''}],
+    [{t:'blank', id:'b0', placeholder:'var name?', answer:'gamer_tag', width:'88px'},
+     {t:'ct', v:' = '},
+     {t:'blank', id:'b1', placeholder:'???', answer:'input', width:'50px'},
+     {t:'ct', v:'('},{t:'cs', v:'"Enter your gamer tag: "'},{t:'ct', v:')'}],
+    [{t:'blank', id:'b2', placeholder:'var name?', answer:'game', width:'50px'},
+     {t:'ct', v:' = '},
+     {t:'blank', id:'b3', placeholder:'???', answer:'input', width:'50px'},
+     {t:'ct', v:'('},{t:'cs', v:'"What game do you play? "'},{t:'ct', v:')'}],
+    [{t:'cc', v:''}],
+    [{t:'cf', v:'print'},{t:'ct', v:'()'}],
+    [{t:'cf', v:'print'},{t:'ct', v:'('},{t:'cs', v:'"Welcome,"'},{t:'ct', v:', '},
+     {t:'blank', id:'b4', placeholder:'var?', answer:'gamer_tag', width:'88px'},{t:'ct', v:')'}],
+    [{t:'cf', v:'print'},{t:'ct', v:'('},{t:'cs', v:'"Game:"'},{t:'ct', v:', '},
+     {t:'blank', id:'b5', placeholder:'var?', answer:'game', width:'50px'},{t:'ct', v:')'}],
+  ],
+  blanks: ['b0','b1','b2','b3','b4','b5'],
+  blankAnswers: {b0:'__varname__', b1:'input', b2:'__varname__', b3:'input', b4:'__varname__', b5:'__varname__'},
+  program: [
+    {t:'print',v:'=== PLAYER REGISTRATION ==='},
+    {t:'print',v:''},
+    {t:'input', k:'__blank__:b0', p:'Enter your gamer tag: '},
+    {t:'input', k:'__blank__:b2', p:'What game do you play? '},
+    {t:'print',v:''},
+    {t:'expr', fn: v => { const el0=document.getElementById('blank_b0'); const k0=(el0&&el0.value.trim())||'b0'; return 'Welcome, ' + v[k0]; }},
+    {t:'expr', fn: v => { const el2=document.getElementById('blank_b2'); const k2=(el2&&el2.value.trim())||'b2'; return 'Game: '    + v[k2]; }},
+  ]
+},
+// 3: variables
+{
+  hint: "All blanks are variable names — make them up! No spaces, use underscores. Example: gamer_tag, my_game, player_role, current_rank. Just make sure the name in the input() line matches the name in the print() line below it!",
+  lines: [
+    [{t:'cc', v:'# STEP 3: Variables — give each a name!'}],
+    [{t:'cc', v:''}],
+    [{t:'cf', v:'print'},{t:'ct', v:'('},{t:'cs', v:'"=== COLLECTING PLAYER INFO ==="'},{t:'ct', v:')'}],
+    [{t:'cf', v:'print'},{t:'ct', v:'()'}],
+    [{t:'cc', v:''}],
+    [{t:'blank', id:'b0', placeholder:'var?', answer:'gamer_tag', width:'88px'},
+     {t:'ct', v:' = '},{t:'cf', v:'input'},{t:'ct', v:'('},{t:'cs', v:'"Gamer tag: "'},{t:'ct', v:')'}],
+    [{t:'blank', id:'b1', placeholder:'var?', answer:'game', width:'50px'},
+     {t:'ct', v:' = '},{t:'cf', v:'input'},{t:'ct', v:'('},{t:'cs', v:'"Game: "'},{t:'ct', v:')'}],
+    [{t:'blank', id:'b2', placeholder:'var?', answer:'role', width:'45px'},
+     {t:'ct', v:' = '},{t:'cf', v:'input'},{t:'ct', v:'('},{t:'cs', v:'"Role: "'},{t:'ct', v:')'}],
+    [{t:'blank', id:'b3', placeholder:'var?', answer:'rank', width:'45px'},
+     {t:'ct', v:' = '},{t:'cf', v:'input'},{t:'ct', v:'('},{t:'cs', v:'"Rank: "'},{t:'ct', v:')'}],
+    [{t:'cc', v:''}],
+    [{t:'cf', v:'print'},{t:'ct', v:'()'}],
+    [{t:'cf', v:'print'},{t:'ct', v:'('},{t:'cs', v:'"TAG  :"'},{t:'ct', v:', '},
+     {t:'blank', id:'b4', placeholder:'var?', answer:'gamer_tag', width:'88px'},{t:'ct', v:')'}],
+    [{t:'cf', v:'print'},{t:'ct', v:'('},{t:'cs', v:'"GAME :"'},{t:'ct', v:', '},
+     {t:'blank', id:'b5', placeholder:'var?', answer:'game', width:'50px'},{t:'ct', v:')'}],
+    [{t:'cf', v:'print'},{t:'ct', v:'('},{t:'cs', v:'"ROLE :"'},{t:'ct', v:', '},
+     {t:'blank', id:'b6', placeholder:'var?', answer:'role', width:'45px'},{t:'ct', v:')'}],
+    [{t:'cf', v:'print'},{t:'ct', v:'('},{t:'cs', v:'"RANK :"'},{t:'ct', v:', '},
+     {t:'blank', id:'b7', placeholder:'var?', answer:'rank', width:'45px'},{t:'ct', v:')'}],
+  ],
+  blanks: ['b0','b1','b2','b3','b4','b5','b6','b7'],
+  blankAnswers: {b0:'__varname__',b1:'__varname__',b2:'__varname__',b3:'__varname__',b4:'__varname__',b5:'__varname__',b6:'__varname__',b7:'__varname__'},
+  program: [
+    {t:'print',v:'=== COLLECTING PLAYER INFO ==='},
+    {t:'print',v:''},
+    {t:'input',k:'__blank__:b0',p:'Gamer tag: '},
+    {t:'input',k:'__blank__:b1',p:'Game: '},
+    {t:'input',k:'__blank__:b2',p:'Role: '},
+    {t:'input',k:'__blank__:b3',p:'Rank: '},
+    {t:'print',v:''},
+    {t:'expr', fn:v=>{ const e=document.getElementById('blank_b0'); return 'TAG  : '+v[(e&&e.value.trim())||'b0']; }},
+    {t:'expr', fn:v=>{ const e=document.getElementById('blank_b1'); return 'GAME : '+v[(e&&e.value.trim())||'b1']; }},
+    {t:'expr', fn:v=>{ const e=document.getElementById('blank_b2'); return 'ROLE : '+v[(e&&e.value.trim())||'b2']; }},
+    {t:'expr', fn:v=>{ const e=document.getElementById('blank_b3'); return 'RANK : '+v[(e&&e.value.trim())||'b3']; }},
+  ]
+},
+// 4: int()
+{
+  hint: "Wrap input() with int() like this: int(input(\"Wins: \"))  — the int goes OUTSIDE the input.",
+  lines: [
+    [{t:'cc', v:'# STEP 4: int() — wrap input() to do math!'}],
+    [{t:'cc', v:''}],
+    [{t:'ct', v:'gamer_tag = '},{t:'cf', v:'input'},{t:'ct', v:'('},{t:'cs', v:'"Gamer tag: "'},{t:'ct', v:')'}],
+    [{t:'ct', v:'wins = '},
+     {t:'blank', id:'b0', placeholder:'???', answer:'int', width:'35px'},
+     {t:'ct', v:'('},{t:'cf', v:'input'},{t:'ct', v:'('},{t:'cs', v:'"Wins: "'},{t:'ct', v:'))'}],
+    [{t:'ct', v:'losses = '},
+     {t:'blank', id:'b1', placeholder:'???', answer:'int', width:'35px'},
+     {t:'ct', v:'('},{t:'cf', v:'input'},{t:'ct', v:'('},{t:'cs', v:'"Losses: "'},{t:'ct', v:'))'}],
+    [{t:'cc', v:''}],
+    [{t:'ct', v:'total = wins + losses'}],
+    [{t:'ct', v:'win_rate = wins / total * '},
+     {t:'blank', id:'b2', placeholder:'??', answer:'100', width:'35px'}],
+    [{t:'cc', v:''}],
+    [{t:'cf', v:'print'},{t:'ct', v:'()'}],
+    [{t:'cf', v:'print'},{t:'ct', v:'('},{t:'cs', v:'"TAG      :"'},{t:'ct', v:', gamer_tag)'}],
+    [{t:'cf', v:'print'},{t:'ct', v:'('},{t:'cs', v:'"WINS     :"'},{t:'ct', v:', wins)'}],
+    [{t:'cf', v:'print'},{t:'ct', v:'('},{t:'cs', v:'"LOSSES   :"'},{t:'ct', v:', losses)'}],
+    [{t:'cf', v:'print'},{t:'ct', v:'('},{t:'cs', v:'"TOTAL    :"'},{t:'ct', v:', total)'}],
+    [{t:'cf', v:'print'},{t:'ct', v:'('},{t:'cs', v:'"WIN RATE :"'},{t:'ct', v:', '},{t:'cf',v:'round'},{t:'ct',v:'(win_rate, '},{t:'cn',v:'1'},{t:'ct',v:'), '},
+     {t:'cs',v:'"%" )'} ],
+  ],
+  blanks: ['b0','b1','b2'],
+  blankAnswers: {b0:'int', b1:'int', b2:'100'},
+  program: [
+    {t:'input',k:'gamer_tag',p:'Gamer tag: '},
+    {t:'input',k:'wins',     p:'Wins: ',   int:true},
+    {t:'input',k:'losses',   p:'Losses: ', int:true},
+    {t:'print',v:''},
+    {t:'expr',fn:v=>'TAG      : '+v.gamer_tag},
+    {t:'expr',fn:v=>'WINS     : '+v.wins},
+    {t:'expr',fn:v=>'LOSSES   : '+v.losses},
+    {t:'expr',fn:v=>'TOTAL    : '+(v.wins+v.losses)},
+    {t:'expr',fn:v=>'WIN RATE : '+Math.round(v.wins/(v.wins+v.losses)*1000)/10+' %'},
+  ]
+},
+// 5: if/else
+{
+  hint: "The number blanks accept ANY integer (like 70, 55, 45 — or make up your own thresholds!). The status blanks accept ANY text in quotes — get creative with your status names! Just make sure quotes wrap the text: \"YOUR STATUS\"",
+  lines: [
+    [{t:'cc', v:'# STEP 5: if/elif/else — the status depends on win rate'}],
+    [{t:'cc', v:''}],
+    [{t:'ct', v:'gamer_tag = '},{t:'cf',v:'input'},{t:'ct',v:'('},{t:'cs',v:'"Gamer tag: "'},{t:'ct',v:')'}],
+    [{t:'ct', v:'wins = '},{t:'cf',v:'int'},{t:'ct',v:'('},{t:'cf',v:'input'},{t:'ct',v:'('},{t:'cs',v:'"Wins: "'},{t:'ct',v:'))'}],
+    [{t:'ct', v:'losses = '},{t:'cf',v:'int'},{t:'ct',v:'('},{t:'cf',v:'input'},{t:'ct',v:'('},{t:'cs',v:'"Losses: "'},{t:'ct',v:'))'}],
+    [{t:'ct', v:'total = wins + losses'}],
+    [{t:'ct', v:'win_rate = wins / total * 100'}],
+    [{t:'cc', v:''}],
+    [{t:'ck', v:'if'},{t:'ct', v:' win_rate >= '},
+     {t:'blank', id:'b0', placeholder:'??', answer:'70', width:'30px'},
+     {t:'ct', v:':'}],
+    [{t:'ct', v:'    status = '},
+     {t:'blank', id:'b1', placeholder:'"???"', answer:'"PRO PLAYER MATERIAL 🔥"', width:'195px'}],
+    [{t:'ck', v:'elif'},{t:'ct', v:' win_rate >= '},
+     {t:'blank', id:'b2', placeholder:'??', answer:'55', width:'30px'},
+     {t:'ct', v:':'}],
+    [{t:'ct', v:'    status = '},
+     {t:'blank', id:'b3', placeholder:'"???"', answer:'"RANKED CLIMBER ⚔️"', width:'155px'}],
+    [{t:'ck', v:'elif'},{t:'ct', v:' win_rate >= '},
+     {t:'blank', id:'b4', placeholder:'??', answer:'45', width:'30px'},
+     {t:'ct', v:':'}],
+    [{t:'ct', v:'    status = '},
+     {t:'blank', id:'b5', placeholder:'"???"', answer:'"HOLDING STEADY 🛡️"', width:'155px'}],
+    [{t:'ck', v:'else'},{t:'ct', v:':'}],
+    [{t:'ct', v:'    status = '},
+     {t:'blank', id:'b6', placeholder:'"???"', answer:'"KEEP GRINDING 💪"', width:'145px'}],
+    [{t:'cc', v:''}],
+    [{t:'cf',v:'print'},{t:'ct',v:'()'}],
+    [{t:'cf',v:'print'},{t:'ct',v:'(gamer_tag, '},
+     {t:'cs',v:'"—"'},{t:'ct',v:', status)'}],
+    [{t:'cf',v:'print'},{t:'ct',v:'('},{t:'cs',v:'"Win Rate:"'},
+     {t:'ct',v:', '},{t:'cf',v:'round'},{t:'ct',v:'(win_rate, 1), '},{t:'cs',v:'"%"'},{t:'ct',v:')'}],
+  ],
+  blanks: ['b0','b1','b2','b3','b4','b5','b6'],
+  blankAnswers: {b0:'__int__',b1:'__quoted__',b2:'__int__',b3:'__quoted__',b4:'__int__',b5:'__quoted__',b6:'__quoted__'},
+  program: [
+    {t:'input',k:'gamer_tag',p:'Gamer tag: '},
+    {t:'input',k:'wins',     p:'Wins: ',   int:true},
+    {t:'input',k:'losses',   p:'Losses: ', int:true},
+    {t:'print',v:''},
+    {t:'status'},
+  ]
+},
+// 6: FINAL BUILD
+{
+  hint: "Variable name blanks: make up any valid name (no spaces, use underscores). The two  int  blanks must be exactly  int  — that's the function that converts text to numbers. Status string blanks: any text in quotes works — make your own status names!",
+  lines: [
+    [{t:'cc', v:'# 🎮 FINAL BUILD — fill ALL blanks and run it!'}],
+    [{t:'cc', v:''}],
+    [{t:'cf',v:'print'},{t:'ct',v:'('},{t:'cs',v:'"=== ESPORTS PLAYER CARD GENERATOR ==="'},{t:'ct',v:')'}],
+    [{t:'cf',v:'print'},{t:'ct',v:'()'}],
+    [{t:'cc', v:''}],
+    [{t:'blank',id:'b0',placeholder:'var?',answer:'gamer_tag',width:'88px'},
+     {t:'ct',v:' = '},{t:'cf',v:'input'},{t:'ct',v:'('},{t:'cs',v:'"Enter gamer tag: "'},{t:'ct',v:')'}],
+    [{t:'blank',id:'b1',placeholder:'var?',answer:'game',width:'48px'},
+     {t:'ct',v:' = '},{t:'cf',v:'input'},{t:'ct',v:'('},{t:'cs',v:'"Game: "'},{t:'ct',v:')'}],
+    [{t:'blank',id:'b2',placeholder:'var?',answer:'role',width:'45px'},
+     {t:'ct',v:' = '},{t:'cf',v:'input'},{t:'ct',v:'('},{t:'cs',v:'"Role / Position: "'},{t:'ct',v:')'}],
+    [{t:'blank',id:'b3',placeholder:'var?',answer:'rank',width:'45px'},
+     {t:'ct',v:' = '},{t:'cf',v:'input'},{t:'ct',v:'('},{t:'cs',v:'"Rank: "'},{t:'ct',v:')'}],
+    [{t:'blank',id:'b4',placeholder:'var?',answer:'wins',width:'45px'},
+     {t:'ct',v:' = '},
+     {t:'blank',id:'b5',placeholder:'???',answer:'int',width:'35px'},
+     {t:'ct',v:'('},{t:'cf',v:'input'},{t:'ct',v:'('},{t:'cs',v:'"Total wins: "'},{t:'ct',v:'))'}],
+    [{t:'blank',id:'b6',placeholder:'var?',answer:'losses',width:'60px'},
+     {t:'ct',v:' = '},
+     {t:'blank',id:'b7',placeholder:'???',answer:'int',width:'35px'},
+     {t:'ct',v:'('},{t:'cf',v:'input'},{t:'ct',v:'('},{t:'cs',v:'"Total losses: "'},{t:'ct',v:'))'}],
+    [{t:'cc',v:''}],
+    [{t:'ct',v:'total = wins + losses'}],
+    [{t:'ct',v:'win_rate = wins / total * 100'}],
+    [{t:'cc',v:''}],
+    [{t:'ck',v:'if'},{t:'ct',v:' win_rate >= 70:'}],
+    [{t:'ct',v:'    status = '},
+     {t:'blank',id:'b8',placeholder:'"???"',answer:'"PRO PLAYER MATERIAL 🔥"',width:'195px'}],
+    [{t:'ck',v:'elif'},{t:'ct',v:' win_rate >= 55:'}],
+    [{t:'ct',v:'    status = '},
+     {t:'blank',id:'b9',placeholder:'"???"',answer:'"RANKED CLIMBER ⚔️"',width:'155px'}],
+    [{t:'ck',v:'elif'},{t:'ct',v:' win_rate >= 45:'}],
+    [{t:'ct',v:'    status = '},
+     {t:'blank',id:'b10',placeholder:'"???"',answer:'"HOLDING STEADY 🛡️"',width:'155px'}],
+    [{t:'ck',v:'else:'  }],
+    [{t:'ct',v:'    status = '},
+     {t:'blank',id:'b11',placeholder:'"???"',answer:'"KEEP GRINDING 💪"',width:'145px'}],
+    [{t:'cc',v:''}],
+    [{t:'cf',v:'print'},{t:'ct',v:'()'}],
+    [{t:'cf',v:'print'},{t:'ct',v:'('},{t:'cs',v:'"╔════════════════════════════════╗"'},{t:'ct',v:')'}],
+    [{t:'cf',v:'print'},{t:'ct',v:'('},{t:'cs',v:'"║      🎮  PLAYER  CARD         ║"'},{t:'ct',v:')'}],
+    [{t:'cf',v:'print'},{t:'ct',v:'('},{t:'cs',v:'"║  TAG   :"'},{t:'ct',v:', gamer_tag)'}],
+    [{t:'cf',v:'print'},{t:'ct',v:'('},{t:'cs',v:'"║  GAME  :"'},{t:'ct',v:', game)'}],
+    [{t:'cf',v:'print'},{t:'ct',v:'('},{t:'cs',v:'"║  WINS  :"'},{t:'ct',v:', wins)'}],
+    [{t:'cf',v:'print'},{t:'ct',v:'('},{t:'cs',v:'"║  LOSS  :"'},{t:'ct',v:', losses)'}],
+    [{t:'cf',v:'print'},{t:'ct',v:'('},{t:'cs',v:'"║  W/R   :"'},{t:'ct',v:', '},{t:'cf',v:'str'},{t:'ct',v:'('},{t:'cf',v:'round'},{t:'ct',v:'(win_rate,1)) + '},
+     {t:'cs',v:'"%"'},{t:'ct',v:')'}],
+    [{t:'cf',v:'print'},{t:'ct',v:'('},{t:'cs',v:'"║  STATUS:"'},{t:'ct',v:', status)'}],
+    [{t:'cf',v:'print'},{t:'ct',v:'('},{t:'cs',v:'"╚════════════════════════════════╝"'},{t:'ct',v:')'}],
+  ],
+  blanks:['b0','b1','b2','b3','b4','b5','b6','b7','b8','b9','b10','b11'],
+  blankAnswers:{b0:'__varname__',b1:'__varname__',b2:'__varname__',b3:'__varname__',b4:'__varname__',b5:'int',b6:'__varname__',b7:'int',b8:'__quoted__',b9:'__quoted__',b10:'__quoted__',b11:'__quoted__'},
+  program: [
+    {t:'print',v:'=== ESPORTS PLAYER CARD GENERATOR ==='},
+    {t:'print',v:''},
+    {t:'input',k:'__blank__:b0',p:'Enter gamer tag: '},
+    {t:'input',k:'__blank__:b1',p:'Game: '},
+    {t:'input',k:'__blank__:b2',p:'Role / Position: '},
+    {t:'input',k:'__blank__:b3',p:'Rank: '},
+    {t:'input',k:'__blank__:b4',p:'Total wins: ',   int:true},
+    {t:'input',k:'__blank__:b6',p:'Total losses: ', int:true},
+    {t:'card'},
+  ]
+},
+];
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let curStep = 0;
+let running = false;
+let inputCb = null;
+let interpVars = {};
+let stepIdx = 0;
+let xp = 0;
+const doneSteps = new Set();
+const ranSteps  = new Set();
+
+// ─────────────────────────────────────────────
+// RENDER CODE WITH BLANKS
+// ─────────────────────────────────────────────
+function renderCode(stepNum) {
+  const step = STEPS[stepNum];
+  const display = document.getElementById('codeDisplay');
+  const nums = document.getElementById('lineNums');
+  display.innerHTML = '';
+  nums.innerHTML = '';
+
+  step.lines.forEach((segs, i) => {
+    const lineEl = document.createElement('div');
+    lineEl.className = 'code-line';
+    lineEl.dataset.lineIdx = i;
+
+    segs.forEach(seg => {
+      if (seg.t === 'blank') {
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.className = 'blank';
+        inp.id = 'blank_' + seg.id;
+        inp.placeholder = seg.placeholder || '___';
+        inp.style.width = seg.width || '60px';
+        inp.autocomplete = 'off';
+        inp.autocorrect = 'off';
+        inp.autocapitalize = 'off';
+        inp.spellcheck = false;
+        inp.addEventListener('input', () => { updateProgress(); hideError(); });
+        inp.addEventListener('keydown', e => { if(e.key==='Enter') runCode(); });
+        lineEl.appendChild(inp);
+      } else {
+        const span = document.createElement('span');
+        span.className = seg.t;
+        span.textContent = seg.v;
+        lineEl.appendChild(span);
+      }
+    });
+
+    display.appendChild(lineEl);
+
+    const numEl = document.createElement('div');
+    numEl.className = 'lnum';
+    numEl.dataset.lineIdx = i;
+    numEl.textContent = i + 1;
+    nums.appendChild(numEl);
+  });
+
+  updateProgress();
+  hideError();
+  hideHint();
+}
+
+function updateProgress() {
+  const step = STEPS[curStep];
+  const blanks = step.blanks || [];
+  if (blanks.length === 0) {
+    document.getElementById('progFill').style.width = '100%';
+    document.getElementById('progPct').textContent = '✓';
+    return;
+  }
+  let filled = 0;
+  blanks.forEach(id => {
+    const el = document.getElementById('blank_' + id);
+    if (el && el.value.trim() !== '') filled++;
+  });
+  const pct = Math.round(filled / blanks.length * 100);
+  document.getElementById('progFill').style.width = pct + '%';
+  document.getElementById('progPct').textContent = filled + ' / ' + blanks.length;
+}
+
+// ─────────────────────────────────────────────
+// VALIDATE BLANKS
+// Returns null if OK, or {blankId, msg, hint} if error
+// ─────────────────────────────────────────────
+function validateBlanks() {
+  const step = STEPS[curStep];
+  if (!step.blanks || step.blanks.length === 0) return null;
+
+  for (let i = 0; i < step.blanks.length; i++) {
+    const id = step.blanks[i];
+    const el = document.getElementById('blank_' + id);
+    if (!el) { continue; }
+    const val = el.value.trim();
+    const expected = step.blankAnswers[id];
+
+    // Empty check
+    if (val === '') {
+      return {
+        blankId: id,
+        lineEl: el.closest('.code-line'),
+        msg: 'Blank "' + el.placeholder + '" is empty — fill it in before running!',
+        hint: 'Look at the lesson on the right for what goes here. Use the 💡 HINT button too!'
+      };
+    }
+
+    // __varname__ — any valid Python identifier
+    if (expected === '__varname__') {
+      if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(val)) {
+        return {
+          blankId: id,
+          lineEl: el.closest('.code-line'),
+          msg: '"' + val + '" is not a valid variable name.',
+          hint: 'Variable names: letters, numbers, underscores only. No spaces! Start with a letter. Example: gamer_tag'
+        };
+      }
+      continue;
+    }
+
+    // __int__ — any whole number
+    if (expected === '__int__') {
+      if (!/^-?\d+$/.test(val)) {
+        return {
+          blankId: id,
+          lineEl: el.closest('.code-line'),
+          msg: '"' + val + '" is not a whole number.',
+          hint: 'This blank needs a number like 70, 55, or 45 — any integer works! No quotes needed.'
+        };
+      }
+      continue;
+    }
+
+    // __quoted__ — any text wrapped in quotes
+    if (expected === '__quoted__') {
+      const validQuoted = (val.startsWith('"') && val.endsWith('"') && val.length >= 3) ||
+                          (val.startsWith("'") && val.endsWith("'") && val.length >= 3);
+      if (!validQuoted) {
+        return {
+          blankId: id,
+          lineEl: el.closest('.code-line'),
+          msg: '"' + val + '" needs to be wrapped in quotes.',
+          hint: 'Text needs quotes around it — like "YOUR TEXT HERE". Be creative with your status names!'
+        };
+      }
+      continue;
+    }
+
+    // Exact match (case-insensitive, whitespace-stripped)
+    const normalize = s => s.replace(/\s/g,'').toLowerCase().replace(/["""]/g,'"');
+    if (normalize(val) !== normalize(expected)) {
+      let friendlyHint = '';
+      if (expected === 'print')       friendlyHint = 'This blank needs the function that SHOWS text. It starts with "p"...';
+      else if (expected === 'input')  friendlyHint = 'This blank needs the function that ASKS for input. It starts with "i"...';
+      else if (expected === 'int')    friendlyHint = 'This blank converts text to a number. 3-letter function: i-n-t';
+      else if (expected === '100')    friendlyHint = 'Multiply by 100 to turn a decimal (0.75) into a percent (75%).';
+      else if (expected.match(/^\d+$/)) friendlyHint = 'This blank is a number. What win rate threshold makes sense here?';
+      else if (expected.startsWith('"')) friendlyHint = 'This blank is text — wrap it in quotes! E.g. "your text here"';
+      else friendlyHint = 'Check your spelling. Variable names are case-sensitive!';
+      return {
+        blankId: id,
+        lineEl: el.closest('.code-line'),
+        msg: 'Hmm, "' + val + '" doesn\'t look right for this blank.',
+        hint: friendlyHint
+      };
+    }
+  }
+  return null;
+}
+
+// ─────────────────────────────────────────────
+// ERROR / HINT UI
+// ─────────────────────────────────────────────
+function showError(err) {
+  const box = document.getElementById('errBox');
+  document.getElementById('errMsg').textContent = err.msg;
+  document.getElementById('errHint').textContent = '💡 ' + err.hint;
+  box.classList.add('show');
+
+  // highlight error line
+  document.querySelectorAll('.code-line').forEach(l => l.classList.remove('err-hl'));
+  document.querySelectorAll('.lnum').forEach(l => l.classList.remove('err-line'));
+  if (err.lineEl) {
+    err.lineEl.classList.add('err-hl');
+    const idx = err.lineEl.dataset.lineIdx;
+    const numEl = document.querySelector(`.lnum[data-line-idx="${idx}"]`);
+    if (numEl) numEl.classList.add('err-line');
+  }
+  // shake the blank
+  if (err.blankId) {
+    const el = document.getElementById('blank_' + err.blankId);
+    if (el) { el.classList.add('wrong'); setTimeout(()=>el.classList.remove('wrong'),400); }
+  }
+}
+
+function hideError() {
+  document.getElementById('errBox').classList.remove('show');
+  document.querySelectorAll('.code-line').forEach(l => l.classList.remove('err-hl'));
+  document.querySelectorAll('.lnum').forEach(l => l.classList.remove('err-line'));
+}
+
+function showHint() {
+  const box = document.getElementById('hintBox');
+  const msg = document.getElementById('hintMsg');
+  msg.textContent = STEPS[curStep].hint;
+  box.classList.toggle('show');
+  hideError();
+}
+
+function hideHint() {
+  document.getElementById('hintBox').classList.remove('show');
+}
+
+// Mark correct blanks green
+function markCorrect() {
+  const step = STEPS[curStep];
+  (step.blanks || []).forEach(id => {
+    const el = document.getElementById('blank_' + id);
+    if (el) el.classList.add('correct');
+  });
+}
+
+// ─────────────────────────────────────────────
+// RUN CODE
+// ─────────────────────────────────────────────
+function runCode() {
+  if (running) return;
+  hideError();
+  hideHint();
+
+  const err = validateBlanks();
+  if (err) { showError(err); return; }
+
+  markCorrect();
+  clearTerm();
+  running = true;
+  stepIdx = 0;
+  interpVars = {};
+  document.getElementById('sdot').classList.add('on');
+  document.getElementById('runBtn').disabled = true;
+  document.getElementById('runBtn').textContent = '⏳ RUNNING';
+
+  tPrint('$ python player_card.py', 'tp');
+  tPrint('', 'to');
+  setTimeout(execNext, 180);
+
+  if (!ranSteps.has(curStep)) {
+    ranSteps.add(curStep);
+    addXP(40, '▶ Code ran! +40 XP');
+  }
+}
+
+// ─────────────────────────────────────────────
+// INTERPRETER
+// ─────────────────────────────────────────────
+function execNext() {
+  if (!running) return;
+  const prog = STEPS[curStep].program;
+  if (stepIdx >= prog.length) { finishRun(); return; }
+  const instr = prog[stepIdx++];
+
+  if (instr.t === 'print') {
+    tPrint(instr.v, 'to');
+    setTimeout(execNext, 35);
+  } else if (instr.t === 'expr') {
+    tPrint(instr.fn(interpVars), 'to');
+    setTimeout(execNext, 35);
+  } else if (instr.t === 'input') {
+    // Resolve __blank__:bX keys to the student's actual typed variable name
+    let storeKey = instr.k;
+    if (storeKey.startsWith('__blank__:')) {
+      const blankId = storeKey.split(':')[1];
+      const blankEl = document.getElementById('blank_' + blankId);
+      storeKey = (blankEl && blankEl.value.trim()) ? blankEl.value.trim() : blankId;
+    }
+    askUser(instr.p, val => {
+      if (instr.int) {
+        const n = parseInt(val, 10);
+        if (isNaN(n)) {
+          tPrint('⚠ TypeError: "' + val + '" is not a number. Enter a whole number!', 'te');
+          stepIdx--;
+          setTimeout(execNext, 80);
+          return;
+        }
+        interpVars[storeKey] = n;
+      } else {
+        interpVars[storeKey] = val;
+      }
+      setTimeout(execNext, 50);
+    });
+  } else if (instr.t === 'status') {
+    const wr = interpVars.wins / (interpVars.wins + interpVars.losses) * 100;
+    // Use student's actual typed thresholds and status strings if on step 5
+    let statusText;
+    if (curStep === 5) {
+      const t0 = parseInt((document.getElementById('blank_b0')||{}).value) || 70;
+      const t1 = parseInt((document.getElementById('blank_b2')||{}).value) || 55;
+      const t2 = parseInt((document.getElementById('blank_b4')||{}).value) || 45;
+      const stripQ = s => (s||'').trim().replace(/^["']|["']$/g,'');
+      const s0 = stripQ((document.getElementById('blank_b1')||{}).value) || 'PRO PLAYER MATERIAL 🔥';
+      const s1 = stripQ((document.getElementById('blank_b3')||{}).value) || 'RANKED CLIMBER ⚔️';
+      const s2 = stripQ((document.getElementById('blank_b5')||{}).value) || 'HOLDING STEADY 🛡️';
+      const s3 = stripQ((document.getElementById('blank_b6')||{}).value) || 'KEEP GRINDING 💪';
+      if      (wr >= t0) statusText = s0;
+      else if (wr >= t1) statusText = s1;
+      else if (wr >= t2) statusText = s2;
+      else               statusText = s3;
+    } else {
+      statusText = getStatus(wr).text;
+    }
+    tPrint(interpVars.gamer_tag + ' — ' + statusText, 'tf');
+    tPrint('Win Rate: ' + Math.round(wr * 10) / 10 + ' %', 'to');
+    setTimeout(execNext, 40);
+  } else if (instr.t === 'card') {
+    renderCard();
+  }
+}
+
+function getStatus(wr) {
+  if (wr >= 70) return {text:'PRO PLAYER MATERIAL 🔥', cls:'tf'};
+  if (wr >= 55) return {text:'RANKED CLIMBER ⚔️',      cls:'tcl'};
+  if (wr >= 45) return {text:'HOLDING STEADY 🛡️',      cls:'thl'};
+  return              {text:'KEEP GRINDING 💪',         cls:'tgr'};
+}
+
+function renderCard() {
+  const v = interpVars;
+
+  // Resolve variable keys — for step 6 the student named them via blanks
+  const key = (blankId) => {
+    const el = document.getElementById('blank_' + blankId);
+    return (el && el.value.trim()) ? el.value.trim() : blankId;
+  };
+
+  const tag    = v[key('b0')] || '';
+  const game   = v[key('b1')] || '';
+  const role   = v[key('b2')] || '';
+  const rank   = v[key('b3')] || '';
+  const wins   = v[key('b4')] || 0;
+  const losses = v[key('b6')] || 0;
+
+  const total = wins + losses;
+  const wr = wins / total * 100;
+  const wrR = Math.round(wr * 10) / 10;
+
+  // Use student's actual typed status strings from blanks
+  const stripQ = s => (s||'').trim().replace(/^["']|["']$/g,'');
+  const s0 = stripQ((document.getElementById('blank_b8') ||{}).value) || 'PRO PLAYER MATERIAL 🔥';
+  const s1 = stripQ((document.getElementById('blank_b9') ||{}).value) || 'RANKED CLIMBER ⚔️';
+  const s2 = stripQ((document.getElementById('blank_b10')||{}).value) || 'HOLDING STEADY 🛡️';
+  const s3 = stripQ((document.getElementById('blank_b11')||{}).value) || 'KEEP GRINDING 💪';
+
+  let statusText;
+  if      (wr >= 70) statusText = s0;
+  else if (wr >= 55) statusText = s1;
+  else if (wr >= 45) statusText = s2;
+  else               statusText = s3;
+
+  const st = getStatus(wr);
+  const lines = [
+    {c:'td', v:''},
+    {c:'tc', v:'╔════════════════════════════════╗'},
+    {c:'tc', v:'║      🎮  PLAYER  CARD         ║'},
+    {c:'tc', v:'╠════════════════════════════════╣'},
+    {c:'to', v:'║  TAG   : ' + tag},
+    {c:'to', v:'║  GAME  : ' + game},
+    {c:'to', v:'║  ROLE  : ' + role},
+    {c:'to', v:'║  RANK  : ' + rank},
+    {c:'tc', v:'╠════════════════════════════════╣'},
+    {c:'to', v:'║  WINS  : ' + wins},
+    {c:'to', v:'║  LOSS  : ' + losses},
+    {c:'to', v:'║  W/R   : ' + wrR + '%'},
+    {c:'tc', v:'╠════════════════════════════════╣'},
+    {c:st.cls, v:'║  STATUS: ' + statusText},
+    {c:'tc', v:'╚════════════════════════════════╝'},
+  ];
+  lines.forEach((l, i) => setTimeout(() => tPrint(l.v, l.c), i * 55));
+  setTimeout(() => {
+    finishRun();
+    if (curStep === 6 && !ranSteps.has('card')) {
+      ranSteps.add('card');
+      addXP(150, '🏆 Full card! +150 XP');
+      document.getElementById('compBanner').classList.add('show');
+    }
+  }, lines.length * 55 + 100);
+}
+
+function finishRun() {
+  running = false;
+  document.getElementById('tinrow').style.display = 'none';
+  document.getElementById('sdot').classList.remove('on');
+  document.getElementById('runBtn').disabled = false;
+  document.getElementById('runBtn').textContent = '▶ RUN';
+  tPrint('', 'ti');
+  tPrint('— Program finished —', 'ti');
+}
+
+// ─────────────────────────────────────────────
+// TERMINAL INPUT
+// ─────────────────────────────────────────────
+function askUser(prompt, cb) {
+  tPrint(prompt, 'ta', true);  // print the prompt line, will append user text
+  inputCb = cb;
+  const row = document.getElementById('tinrow');
+  const field = document.getElementById('tinput');
+  row.style.display = 'flex';
+  field.disabled = false;
+  document.getElementById('tsub').disabled = false;
+  field.placeholder = 'Type your answer...';
+  setTimeout(() => field.focus(), 30);
+}
+
+function submitInput() {
+  if (!inputCb) return;
+  const field = document.getElementById('tinput');
+  const val = field.value;
+  // append typed value to last terminal line
+  const area = document.getElementById('tout');
+  const last = area.lastElementChild;
+  if (last) {
+    const span = document.createElement('span');
+    span.className = 'tv';
+    span.textContent = val;
+    last.appendChild(span);
+  }
+  document.getElementById('tinrow').style.display = 'none';
+  field.disabled = true;
+  document.getElementById('tsub').disabled = true;
+  field.value = '';
+  const cb = inputCb;
+  inputCb = null;
+  cb(val);
+}
+
+// ─────────────────────────────────────────────
+// TERMINAL HELPERS
+// ─────────────────────────────────────────────
+function tPrint(text, cls) {
+  const area = document.getElementById('tout');
+  const el = document.createElement('div');
+  el.className = 'tl ' + (cls || 'to');
+  el.textContent = text;
+  area.appendChild(el);
+  area.scrollTop = area.scrollHeight;
+}
+
+function clearTerm() {
+  document.getElementById('tout').innerHTML = '';
+  document.getElementById('tinrow').style.display = 'none';
+  document.getElementById('sdot').classList.remove('on');
+  document.getElementById('runBtn').disabled = false;
+  document.getElementById('runBtn').textContent = '▶ RUN';
+  running = false;
+  inputCb = null;
+}
+
+// Enter key
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && inputCb) {
+    const row = document.getElementById('tinrow');
+    if (row.style.display !== 'none') submitInput();
+  }
+});
+
+// ─────────────────────────────────────────────
+// STEP NAVIGATION
+// ─────────────────────────────────────────────
+function goStep(n, btn) {
+  curStep = n;
+  clearTerm();
+  hideError();
+  hideHint();
+
+  document.querySelectorAll('.ls').forEach((s, i) => s.classList.toggle('active', i === n));
+  document.querySelectorAll('.sbtn').forEach((b, i) => {
+    b.classList.remove('active');
+    if (doneSteps.has(i) && i !== n) b.classList.add('done');
+  });
+  (btn || document.querySelectorAll('.sbtn')[n]).classList.add('active');
+
+  renderCode(n);
+
+  document.getElementById('prevBtn').disabled = n === 0;
+  document.getElementById('nextBtn').disabled = n === 6;
+  document.getElementById('nextBtn').textContent = n === 5 ? '🎮 FINAL BUILD →' : 'NEXT →';
+
+  if (!doneSteps.has(n)) {
+    doneSteps.add(n);
+    if (n > 0) addXP(50, 'Step ' + n + ' unlocked! +50 XP');
+  }
+}
+
+function nextStep() { if (curStep < 6) goStep(curStep + 1, null); }
+function prevStep() { if (curStep > 0) goStep(curStep - 1, null); }
+
+// ─────────────────────────────────────────────
+// TAB SWITCHING
+// ─────────────────────────────────────────────
+function switchTab(tab, btn) {
+  document.querySelectorAll('.rtb').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.getElementById('lessonPane').style.display = tab === 'lesson' ? 'block' : 'none';
+  document.getElementById('glossaryPane').classList.toggle('active', tab === 'glossary');
+  document.getElementById('bonusPane').classList.toggle('active', tab === 'bonus');
+}
+
+// ─────────────────────────────────────────────
+// XP SYSTEM
+// ─────────────────────────────────────────────
+function addXP(amt, msg) {
+  xp = Math.min(xp + amt, 800);
+  document.getElementById('xpFill').style.width = (xp / 800 * 100) + '%';
+  const pill = document.getElementById('rankPill');
+  let r, c, bg, b;
+  if      (xp < 150) { r='NEWBIE';   c='#4dff91'; bg='rgba(77,255,145,.12)'; b='#4dff91'; }
+  else if (xp < 300) { r='CODER';    c='#40d0f0'; bg='rgba(64,208,240,.12)'; b='#40d0f0'; }
+  else if (xp < 500) { r='BUILDER';  c='#a070ff'; bg='rgba(160,112,255,.12)';b='#a070ff'; }
+  else if (xp < 650) { r='DEV';      c='#f0c040'; bg='rgba(240,192,64,.12)'; b='#f0c040'; }
+  else               { r='HACKER 🔥';c='#e05c3c'; bg='rgba(224,92,60,.15)';  b='#e05c3c'; }
+  pill.textContent = r;
+  Object.assign(pill.style, {color:c, background:bg, border:`1px solid ${b}`});
+  if (msg) showNotif(msg);
+}
+
+function showNotif(msg) {
+  const el = document.getElementById('notif');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+renderCode(0);
+</script>
+</body>
+</html>
